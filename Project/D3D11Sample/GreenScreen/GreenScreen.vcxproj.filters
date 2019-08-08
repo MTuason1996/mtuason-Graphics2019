@@ -12,6 +12,9 @@
     <Filter Include="Gateware">
       <UniqueIdentifier>{972f1612-edd5-4450-9480-83cf92dced99}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{4f60085c-6fda-4623-b592-3e9373c8d975}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LetsDrawSomeStuff.h">
@@ -28,5 +31,13 @@
     <ClCompile Include="..\..\Gateware\Source\G_Graphics\GDirectX11Surface.cpp">
       <Filter>Gateware</Filter>
     </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="VertexShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PixelShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
