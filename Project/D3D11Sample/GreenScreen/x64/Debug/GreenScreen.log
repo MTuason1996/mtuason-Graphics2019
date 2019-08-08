@@ -1,0 +1,9 @@
+﻿  GDirectX11Surface.cpp
+c:\users\marct\downloads\d3d11 gateware sample v2\gateware\source\g_graphics\gdirectx11surface.cpp(214): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\downloads\d3d11 gateware sample v2\gateware\source\g_graphics\gdirectx11surface.cpp(215): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\downloads\d3d11 gateware sample v2\gateware\source\g_graphics\gdirectx11surface.cpp(426): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\downloads\d3d11 gateware sample v2\gateware\source\g_graphics\gdirectx11surface.cpp(427): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+  GWindow.cpp
+  main.cpp
+  Generating Code...
+  GreenScreen.vcxproj -> C:\Users\marct\Downloads\D3D11 Gateware Sample v2\D3D11Sample\x64\Debug\GreenScreen.exe
