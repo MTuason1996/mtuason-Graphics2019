@@ -30,33 +30,23 @@ class LetsDrawSomeStuff
 	ID3D11DeviceContext *myContext = nullptr;
 
 	// TODO: Add your own D3D11 variables here (be sure to "Release()" them when done!)
-	struct Vec2D
-	{
-		float x, y;
-	};
-	struct Vec4D
-	{
-		float x, y, z, w;
-	};
-
 	struct Vertex
 	{
-		Vec4D pos;
-		Vec4D color;
-		Vec4D normal;
-		Vec2D uv;
+		XMFLOAT4 pos;
+		XMFLOAT2 uv;
+		XMFLOAT4 normal;
+		XMFLOAT4 color;
 	};
 
 	ID3D11Buffer* vBuffer = nullptr;
 	ID3D11Buffer* iBuffer = nullptr;
-	ID3D11Buffer* cBuffer = nullptr;
+	//ID3D11Buffer* cBuffer = nullptr;
 	ID3D11InputLayout* vLayout = nullptr;
 	ID3D11VertexShader* vShader = nullptr;
 	ID3D11PixelShader* pShader = nullptr; //hlsl
-	D3D11_VIEWPORT myPort;
 
 	// Math
-	XMFLOAT4X4 wMatrix;
+	//XMFLOAT4X4 wMatrix;
 	HRESULT hr;
 
 public:
@@ -82,34 +72,42 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			mySurface->GetContext((void**)&myContext);
 
 			// TODO: Create new DirectX stuff here! (Buffers, Shaders, Layouts, Views, Textures, etc...)
-
 			//load onto card
 			D3D11_BUFFER_DESC bDesc = {};
 			D3D11_SUBRESOURCE_DATA subData = {};
 			//ZeroMemory(&bDesc, sizeof(bDesc));
 			//ZeroMemory(&subData, sizeof(subData));
 
+			Vertex tri[3] = 
+			{
+				// pos					uv		normal			color
+				{ {0, 0.5f, 0, 1},		{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} },
+				{ {0.5f, -0.5f, 0, 1},	{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} },
+				{ {-0.5f, -0.5f, 0, 1},	{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} }
+			};
+
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(StoneHenge_data);
+			bDesc.ByteWidth = sizeof(Vertex) * 3;
 			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
-			bDesc.Usage = D3D11_USAGE_IMMUTABLE;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = StoneHenge_data;
+			subData.pSysMem = tri;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			//IndexBuffer
-			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(StoneHenge_indicies);
-			 bDesc.CPUAccessFlags = 0;
-			 bDesc.StructureByteStride = 0;
-			 bDesc.Usage = D3D11_USAGE_IMMUTABLE;
+			////IndexBuffer
+			// bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			// bDesc.ByteWidth = sizeof(StoneHenge_indicies);
+			// bDesc.CPUAccessFlags = 0;
+			// bDesc.StructureByteStride = 0;
+			// bDesc.Usage = D3D11_USAGE_IMMUTABLE;
 
-			subData.pSysMem = StoneHenge_indicies;
+			//subData.pSysMem = StoneHenge_indicies;
 
-			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
+			//hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -119,18 +117,19 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			 D3D11_INPUT_ELEMENT_DESC ieDesc[] = 
 			 {
 				 {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				 {"TEXTURE", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				 {"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+				 {"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				 {"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				 {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			 };
-			hr = myDevice->CreateInputLayout(ieDesc, 3, VertexShader, sizeof(VertexShader), &vLayout);
+			hr = myDevice->CreateInputLayout(ieDesc, 4, VertexShader, sizeof(VertexShader), &vLayout);
 
-			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			bDesc.ByteWidth = sizeof(XMFLOAT4X4);
-			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			bDesc.StructureByteStride = 0;
-			bDesc.Usage = D3D11_USAGE_DYNAMIC;
+			//bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			//bDesc.ByteWidth = sizeof(XMFLOAT4X4);
+			//bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			//bDesc.StructureByteStride = 0;
+			//bDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-			hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
+			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
 
 		}
 	}
@@ -182,19 +181,18 @@ void LetsDrawSomeStuff::Render()
 			myContext->OMSetRenderTargets(1, targets, myDepthStencilView);
 
 			// Clear the screen to green
-			const float d_green[] = { 0.498f, 0.729f, 0, 1 }; // "DirectX Green"
-			myContext->ClearRenderTargetView(myRenderTargetView, d_green);
+			const float color[] = { 0, 1, 0.5f, 1 };
+			myContext->ClearRenderTargetView(myRenderTargetView, color);
 			
 			// TODO: Set your shaders, Update & Set your constant buffers, Attach your vertex & index buffers, Set your InputLayout & Topology & Draw!
-			//Rasterizer
-			//myContext->RSSetViewports(1, &myPort);
 			//Input Assembler
 			myContext->IASetInputLayout(vLayout);
 
 			UINT strides[] = { sizeof(Vertex) };
 			UINT offsets[] = { 0 };
-			myContext->IASetVertexBuffers(0, 1, &vBuffer, strides, offsets);
-			myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R16_UINT, 0);
+			ID3D11Buffer* tempVB[] = { vBuffer };
+			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
+			//myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R16_UINT, 0);
 			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			
 			//Vertex Shader Stage
@@ -203,19 +201,19 @@ void LetsDrawSomeStuff::Render()
 			myContext->PSSetShader(pShader, 0, 0);
 
 			// Draw
-			myContext->Draw(ARRAYSIZE(StoneHenge_data), 0);
+			myContext->Draw(3, 0);
 
-			XMMATRIX temp = XMMatrixIdentity();
-			temp = XMMatrixTranslation(0, 0, 3);
-			XMStoreFloat4x4(&wMatrix, temp);
+			//XMMATRIX temp = XMMatrixIdentity();
+			//temp = XMMatrixTranslation(0, 0, 3);
+			//XMStoreFloat4x4(&wMatrix, temp);
 
-			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
-			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			gpuBuffer.pData = 
+			//D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+			//myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			//gpuBuffer.pData = ;
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
-			mySwapChain->Present(0, 0); // set first argument to 1 to enable vertical refresh sync with display
+			mySwapChain->Present(1, 0); // set first argument to 1 to enable vertical refresh sync with display
 
 			// Free any temp DX handles aquired this frame
 			myRenderTargetView->Release();

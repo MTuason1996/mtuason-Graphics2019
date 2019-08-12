@@ -9,6 +9,7 @@ struct InputVertex
     float4 pos : POSITION;
     float2 uv : TEXTURE;
     float4 normal : NORMAL;
+	float4 color : COLOR;
 };
 
 struct OutputVertex
