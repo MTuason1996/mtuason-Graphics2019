@@ -40,13 +40,27 @@ class LetsDrawSomeStuff
 
 	ID3D11Buffer* vBuffer = nullptr;
 	ID3D11Buffer* iBuffer = nullptr;
-	//ID3D11Buffer* cBuffer = nullptr;
+	ID3D11Buffer* cBuffer = nullptr;
 	ID3D11InputLayout* vLayout = nullptr;
 	ID3D11VertexShader* vShader = nullptr;
 	ID3D11PixelShader* pShader = nullptr; //hlsl
 
 	// Math
-	//XMFLOAT4X4 wMatrix;
+	struct WVP
+	{
+	XMFLOAT4X4 wMatrix;
+	XMFLOAT4X4 vMatrix;
+	XMFLOAT4X4 pMatrix;
+	}myMatrices;
+
+	float aspectR = 1.0f;
+
+	Vertex * vertices;
+	int numVertices = 0;
+	int * indices = nullptr;
+	int numIndices = 0;
+	float scale = 5.0f;
+
 	HRESULT hr;
 
 public:
@@ -75,26 +89,43 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			//load onto card
 			D3D11_BUFFER_DESC bDesc = {};
 			D3D11_SUBRESOURCE_DATA subData = {};
-			//ZeroMemory(&bDesc, sizeof(bDesc));
-			//ZeroMemory(&subData, sizeof(subData));
+			ZeroMemory(&bDesc, sizeof(bDesc));
+			ZeroMemory(&subData, sizeof(subData));
 
-			Vertex tri[3] = 
+			Vertex pyramid[12] = 
 			{
-				// pos					uv		normal			color
-				{ {0, 0.5f, 0, 1},		{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} },
-				{ {0.5f, -0.5f, 0, 1},	{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} },
-				{ {-0.5f, -0.5f, 0, 1},	{0, 0},	{0, 0, 0, 1},	{1, 1, 1, 1} }
+				// pos							uv		normal			color
+				//front
+				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
+				{ {0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
+				{ {-0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+
+				//right
+				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
+				{ {0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
+				{ {0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+
+				//back
+				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
+				{ {-0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
+				{ {0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+
+				//left
+				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
+				{ {-0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
+				{ {-0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+
 			};
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(Vertex) * 3;
+			bDesc.ByteWidth = sizeof(pyramid);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = tri;
+			subData.pSysMem = pyramid;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
@@ -123,13 +154,14 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			 };
 			hr = myDevice->CreateInputLayout(ieDesc, 4, VertexShader, sizeof(VertexShader), &vLayout);
 
-			//bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			//bDesc.ByteWidth = sizeof(XMFLOAT4X4);
-			//bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			//bDesc.StructureByteStride = 0;
-			//bDesc.Usage = D3D11_USAGE_DYNAMIC;
+			//constant buffer
+			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			bDesc.ByteWidth = sizeof(WVP);
+			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
+			hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
 
 		}
 	}
@@ -149,6 +181,7 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (vLayout) vLayout->Release();
 	if (vShader) vShader->Release();
 	if (pShader) pShader->Release();
+	if (cBuffer) cBuffer->Release();
 
 
 
@@ -183,7 +216,7 @@ void LetsDrawSomeStuff::Render()
 			// Clear the screen to green
 			const float color[] = { 0, 1, 0.5f, 1 };
 			myContext->ClearRenderTargetView(myRenderTargetView, color);
-			
+
 			// TODO: Set your shaders, Update & Set your constant buffers, Attach your vertex & index buffers, Set your InputLayout & Topology & Draw!
 			//Input Assembler
 			myContext->IASetInputLayout(vLayout);
@@ -194,22 +227,42 @@ void LetsDrawSomeStuff::Render()
 			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
 			//myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R16_UINT, 0);
 			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			
+
 			//Vertex Shader Stage
 			myContext->VSSetShader(vShader, 0, 0);
 			//Pixel Shader Stage
 			myContext->PSSetShader(pShader, 0, 0);
 
 			// Draw
-			myContext->Draw(3, 0);
+			myContext->Draw(12, 0);
 
-			//XMMATRIX temp = XMMatrixIdentity();
-			//temp = XMMatrixTranslation(0, 0, 3);
-			//XMStoreFloat4x4(&wMatrix, temp);
+			//World Matrix
+			static float rot = 0; rot += 0.01f;
+			XMMATRIX temp = XMMatrixIdentity();
+			temp = XMMatrixMultiply(temp, XMMatrixRotationY(rot));
+			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
-			//D3D11_MAPPED_SUBRESOURCE gpuBuffer;
-			//myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			//gpuBuffer.pData = ;
+			//View Matrix
+			temp = XMMatrixRotationX(XMConvertToRadians(-18));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 0, -5));
+			temp = XMMatrixInverse(nullptr, temp);
+			//temp = XMMatrixLookAtLH({ 2,1,-3 }, { 0,0,0 }, { 0,1,0 });
+			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
+
+			//Projection Matrix
+			temp = XMMatrixPerspectiveFovLH(3.14f / 2.0f, aspectR, 0.1f, 1000.0f);
+			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
+
+
+			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			//connect constant buffer to pipeline
+			ID3D11Buffer * constants[] = { cBuffer };
+			myContext->VSSetConstantBuffers(0, 1, constants);
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.

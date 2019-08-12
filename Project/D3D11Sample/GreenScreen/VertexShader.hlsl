@@ -14,14 +14,27 @@ struct InputVertex
 
 struct OutputVertex
 {
-    float4 pos : SV_POSITION;
+	float4 pos : SV_POSITION;
+	float4 color : OCOLOR;
+};
+
+cbuffer SHADER_VARS : register(b0)
+{
+	float4x4 worldMatrix;
+	float4x4 viewMatrix;
+	float4x4 projMatrix;
 };
 
 OutputVertex main(InputVertex input)
 {
     OutputVertex output = (OutputVertex) 0;
     output.pos = input.pos;
+	output.color = input.color;
     //Do math here
+	output.pos = mul(worldMatrix, output.pos);
+	output.pos = mul(viewMatrix, output.pos);
+	output.pos = mul(projMatrix, output.pos);
+
 
     return output;
 
