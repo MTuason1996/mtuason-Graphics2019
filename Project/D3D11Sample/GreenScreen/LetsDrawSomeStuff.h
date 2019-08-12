@@ -266,7 +266,7 @@ void LetsDrawSomeStuff::Render()
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
-			mySwapChain->Present(1, 0); // set first argument to 1 to enable vertical refresh sync with display
+			mySwapChain->Present(0, 0); // set first argument to 1 to enable vertical refresh sync with display
 
 			// Free any temp DX handles aquired this frame
 			myRenderTargetView->Release();
