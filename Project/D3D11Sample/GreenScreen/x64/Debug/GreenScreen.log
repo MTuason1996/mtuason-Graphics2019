@@ -1,4 +1,3 @@
-﻿  compilation header save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\GreenScreen\VertexShader.csh
-  compilation object save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\VertexShader.cso
-  main.cpp
+﻿  main.cpp
+c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(353): warning C4305: 'initializing': truncation from 'double' to 'float'
   GreenScreen.vcxproj -> C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\GreenScreen.exe

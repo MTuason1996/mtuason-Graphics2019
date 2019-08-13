@@ -71,7 +71,7 @@ class LetsDrawSomeStuff
 	struct Lights
 	{
 		XMFLOAT4 dLight[3];
-		XMFLOAT4 pLight[3];
+		XMFLOAT4 pLight[4];
 	}myLights;
 
 	float aspectR = 1.0f;
@@ -164,9 +164,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			Vertex stoneHenge[ARRAYSIZE(StoneHenge_data)];
 			for (int i = 0; i < ARRAYSIZE(StoneHenge_data); ++i)
 			{
-				stoneHenge[i].pos.x = StoneHenge_data[i].pos[0];
-				stoneHenge[i].pos.y = StoneHenge_data[i].pos[1];
-				stoneHenge[i].pos.z = StoneHenge_data[i].pos[2];
+				stoneHenge[i].pos.x = StoneHenge_data[i].pos[0] * 0.1f;
+				stoneHenge[i].pos.y = StoneHenge_data[i].pos[1] * 0.1f;
+				stoneHenge[i].pos.z = StoneHenge_data[i].pos[2] * 0.1f;
 				stoneHenge[i].pos.w = 1.0f;
 
 				stoneHenge[i].uv.x = StoneHenge_data[i].uvw[0];
@@ -339,7 +339,7 @@ void LetsDrawSomeStuff::Render()
 
 			//View Matrix
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
-			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 15, -35));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 2, -5));
 
 			//Camera controls
 			static float xAxisT = 0;
@@ -350,28 +350,30 @@ void LetsDrawSomeStuff::Render()
 			static float zAxisT = 0;
 
 			//Translate
+			float tSpeed = 0.0075;
 			if (GetAsyncKeyState('W'))
-				zAxisT += 0.1f;
+				zAxisT += tSpeed;
 			if (GetAsyncKeyState('S'))
-				zAxisT -= 0.1f;
+				zAxisT -= tSpeed;
 			if (GetAsyncKeyState('A'))
-				xAxisT -= 0.1f;
+				xAxisT -= tSpeed;
 			if (GetAsyncKeyState('D'))
-				xAxisT += 0.1f;
+				xAxisT += tSpeed;
 			if (GetAsyncKeyState(VK_SPACE) && GetAsyncKeyState(VK_LSHIFT))
-				yAxisT -= 0.1f;
+				yAxisT -= tSpeed;
 			else if (GetAsyncKeyState(VK_SPACE))
-				yAxisT += 0.1f;
+				yAxisT += tSpeed;
 
 			//Rotate
+			float rSpeed = 0.1f;
 			if (GetAsyncKeyState('K'))
-				xAxisR += 0.1f;
+				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
-				xAxisR -= 0.1f;
+				xAxisR -= rSpeed;
 			if (GetAsyncKeyState('J'))
-				yAxisR -= 0.1f;
+				yAxisR -= rSpeed;
 			if (GetAsyncKeyState('L'))
-				yAxisR += 0.1f;
+				yAxisR += rSpeed;
 
 			//reset position and rotation
 			if (GetAsyncKeyState('R'))
@@ -415,6 +417,7 @@ void LetsDrawSomeStuff::Render()
 			myLights.pLight[0] = { -1.0f, 0.5f, 1.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			myLights.pLight[2] = { 1,1,0,1 };
+			myLights.pLight[3].x = 4.0f;
 
 			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
 			XMStoreFloat4(&myLights.pLight[1], temp2);
