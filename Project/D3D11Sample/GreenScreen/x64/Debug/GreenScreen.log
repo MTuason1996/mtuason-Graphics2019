@@ -1,2 +1,13 @@
-﻿  main.cpp
+﻿  compilation header save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\GreenScreen\PixelShader.csh
+  compilation object save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\PixelShader.cso
+  compilation header save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\GreenScreen\VertexShader.csh
+  compilation object save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\VertexShader.cso
+  GDirectX11Surface.cpp
+c:\users\marct\desktop\mtuason-pp4\project\gateware\source\g_graphics\gdirectx11surface.cpp(214): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\desktop\mtuason-pp4\project\gateware\source\g_graphics\gdirectx11surface.cpp(215): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\desktop\mtuason-pp4\project\gateware\source\g_graphics\gdirectx11surface.cpp(426): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+c:\users\marct\desktop\mtuason-pp4\project\gateware\source\g_graphics\gdirectx11surface.cpp(427): warning C4244: '=': conversion from 'unsigned int' to 'FLOAT', possible loss of data
+  GWindow.cpp
+  main.cpp
+  Generating Code...
   GreenScreen.vcxproj -> C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\GreenScreen.exe

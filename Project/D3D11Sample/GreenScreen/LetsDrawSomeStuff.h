@@ -11,8 +11,15 @@
 // Include DirectX11 for interface access
 #include <d3d11.h>
 #include <DirectXMath.h>
+
+// DDSTextureLoading
+#include "DDSTextureLoader.h"
+
+// models and textures
 #include "StoneHenge.h"
 #include "StoneHenge_Texture.h"
+
+#include "Assets/TexturedBox.h"
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
@@ -38,12 +45,17 @@ class LetsDrawSomeStuff
 		XMFLOAT4 color;
 	};
 
-	ID3D11Buffer* vBuffer = nullptr;
-	ID3D11Buffer* iBuffer = nullptr;
-	ID3D11Buffer* cBuffer = nullptr;
-	ID3D11InputLayout* vLayout = nullptr;
-	ID3D11VertexShader* vShader = nullptr;
-	ID3D11PixelShader* pShader = nullptr; //hlsl
+	ID3D11Buffer*				vBuffer = nullptr;
+	ID3D11Buffer*				iBuffer = nullptr;
+	ID3D11Buffer*				cBuffer = nullptr;
+	//ID3D11Buffer*				txBuffer = nullptr;
+	ID3D11InputLayout*			vLayout = nullptr;
+	ID3D11VertexShader*			vShader = nullptr;
+	ID3D11PixelShader*			pShader = nullptr; //hlsl
+
+	////Textures
+	//ID3D11ShaderResourceView*	textureBox = nullptr;
+	//ID3D11SamplerState*			samplerLin = nullptr;
 
 	// Math
 	struct WVP
@@ -52,6 +64,17 @@ class LetsDrawSomeStuff
 	XMFLOAT4X4 vMatrix;
 	XMFLOAT4X4 pMatrix;
 	}myMatrices;
+
+	// texture loading
+	//struct tx
+	//{
+	//	unsigned int Width = 0;
+	//	unsigned int Height = 0;
+	//	unsigned int NumPixels = 0;
+	//	unsigned int NumLevels = 0;
+	//	const unsigned int* Offsets = nullptr;
+	//	const unsigned int* Raster = nullptr;
+	//}myTexture;
 
 	float aspectR = 1.0f;
 
@@ -119,28 +142,72 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			};
 
+			////box
+			//Vertex box[ARRAYSIZE(TexturedBox_data)];
+			//for (int i = 0; i < ARRAYSIZE(TexturedBox_data); ++i)
+			//{
+			//	box[i].pos.x = TexturedBox_data[i].pos[0];
+			//	box[i].pos.y = TexturedBox_data[i].pos[1];
+			//	box[i].pos.z = TexturedBox_data[i].pos[2];
+			//	box[i].pos.w = 1.0f;
+
+			//	box[i].uv.x = TexturedBox_data[i].uvw[0];
+			//	box[i].uv.y = TexturedBox_data[i].uvw[1];
+
+			//	box[i].normal.x = TexturedBox_data[i].nrm[0];
+			//	box[i].normal.y = TexturedBox_data[i].nrm[1];
+			//	box[i].normal.z = TexturedBox_data[i].nrm[2];
+			//	box[i].normal.w = 0.0f;
+
+			//	box[i].color = { 0,0,0,1 };
+			//}
+
+			//StoneHenge
+			Vertex stoneHenge[ARRAYSIZE(StoneHenge_data)];
+			for (int i = 0; i < ARRAYSIZE(StoneHenge_data); ++i)
+			{
+				stoneHenge[i].pos.x = StoneHenge_data[i].pos[0];
+				stoneHenge[i].pos.y = StoneHenge_data[i].pos[1];
+				stoneHenge[i].pos.z = StoneHenge_data[i].pos[2];
+				stoneHenge[i].pos.w = 1.0f;
+
+				stoneHenge[i].uv.x = StoneHenge_data[i].uvw[0];
+				stoneHenge[i].uv.y = StoneHenge_data[i].uvw[1];
+
+				stoneHenge[i].normal.x = StoneHenge_data[i].nrm[0];
+				stoneHenge[i].normal.y = StoneHenge_data[i].nrm[1];
+				stoneHenge[i].normal.z = StoneHenge_data[i].nrm[2];
+				stoneHenge[i].normal.w = 0.0f;
+
+				stoneHenge[i].color = { 0,0,0,1 };
+			}
+
+
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(pyramid);
+			bDesc.ByteWidth = sizeof(stoneHenge);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = pyramid;
+			subData.pSysMem = stoneHenge;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			////IndexBuffer
-			// bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			// bDesc.ByteWidth = sizeof(StoneHenge_indicies);
-			// bDesc.CPUAccessFlags = 0;
-			// bDesc.StructureByteStride = 0;
-			// bDesc.Usage = D3D11_USAGE_IMMUTABLE;
+			numVertices = ARRAYSIZE(stoneHenge);
 
-			//subData.pSysMem = StoneHenge_indicies;
+			//IndexBuffer
+			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			 bDesc.ByteWidth = sizeof(StoneHenge_indicies);
+			 bDesc.CPUAccessFlags = 0;
+			 bDesc.StructureByteStride = 0;
+			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			//hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
+			subData.pSysMem = StoneHenge_indicies;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
+			numIndices = ARRAYSIZE(StoneHenge_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -165,6 +232,37 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
 
+			//Load Texture
+			//myTexture.Width = StoneHenge_width;
+			//myTexture.Height = StoneHenge_height;
+			//myTexture.NumPixels = StoneHenge_numpixels;
+			//myTexture.NumLevels = StoneHenge_numlevels;
+			//myTexture.Offsets = StoneHenge_leveloffsets;
+			//myTexture.Raster = StoneHenge_pixels;
+
+			//bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			//bDesc.ByteWidth = sizeof(tx);
+			//bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			//bDesc.StructureByteStride = 0;
+			//bDesc.Usage = D3D11_USAGE_DYNAMIC;
+
+			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
+
+
+			//hr = CreateDDSTextureFromFile(myDevice, L"StoneHenge.dds", nullptr, &textureBox);
+
+			//// Create sample state
+			//D3D11_SAMPLER_DESC sampDesc = {};
+			//sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			//sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+			//sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+			//sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+			//sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+			//sampDesc.MinLOD = 0;
+			//sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+			//hr = myDevice->CreateSamplerState(&sampDesc, &samplerLin);
+
+
 		}
 	}
 }
@@ -184,6 +282,10 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (vShader) vShader->Release();
 	if (pShader) pShader->Release();
 	if (cBuffer) cBuffer->Release();
+	//if (samplerLin) samplerLin->Release();
+
+	// release shader resource
+	//if (textureBox) textureBox->Release();
 
 
 
@@ -227,7 +329,7 @@ void LetsDrawSomeStuff::Render()
 			UINT offsets[] = { 0 };
 			ID3D11Buffer* tempVB[] = { vBuffer };
 			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
-			//myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R16_UINT, 0);
+			myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			//Vertex Shader Stage
@@ -236,17 +338,17 @@ void LetsDrawSomeStuff::Render()
 			myContext->PSSetShader(pShader, 0, 0);
 
 			// Draw
-			myContext->Draw(12, 0);
+			myContext->DrawIndexed(numIndices, 0, 0);
 
 			//World Matrix
-			static float rot = 0; rot += 0.01f;
+			static float rot = 0; rot += 0.0001f;
 			XMMATRIX temp = XMMatrixIdentity();
 			temp = XMMatrixMultiply(temp, XMMatrixRotationY(rot));
 			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
 			//View Matrix
-			temp = XMMatrixRotationX(XMConvertToRadians(-18));
-			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 0, -5));
+			temp = XMMatrixRotationX(XMConvertToRadians(25));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 15, -35));
 			temp = XMMatrixInverse(nullptr, temp);
 			//temp = XMMatrixLookAtLH({ 2,1,-3 }, { 0,0,0 }, { 0,1,0 });
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
@@ -265,6 +367,16 @@ void LetsDrawSomeStuff::Render()
 			//connect constant buffer to pipeline
 			ID3D11Buffer * constants[] = { cBuffer };
 			myContext->VSSetConstantBuffers(0, 1, constants);
+
+			//myContext->Map(txBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			//*((tx*)(gpuBuffer.pData)) = myTexture;
+
+			//myContext->Unmap(txBuffer, 0);
+			//myContext->PSSetConstantBuffers(0, 1, &txBuffer);
+
+			//dds
+			//myContext->PSSetShaderResources(0, 1, &textureBox);
+			//myContext->PSSetSamplers(0, 1, &samplerLin);
 
 			//Camera controls
 

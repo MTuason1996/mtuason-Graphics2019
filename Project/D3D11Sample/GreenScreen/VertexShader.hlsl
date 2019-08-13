@@ -31,6 +31,7 @@ OutputVertex main(InputVertex input)
     output.pos = input.pos;
 	output.color = input.color;
     //Do math here
+
 	output.pos = mul(worldMatrix, output.pos);
 	output.pos = mul(viewMatrix, output.pos);
 	output.pos = mul(projMatrix, output.pos);
