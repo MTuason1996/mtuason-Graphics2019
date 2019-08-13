@@ -50,6 +50,7 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				vBuffer = nullptr;
 	ID3D11Buffer*				iBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
+	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11InputLayout*			vLayout = nullptr;
 	ID3D11VertexShader*			vShader = nullptr;
 	ID3D11PixelShader*			pShader = nullptr; //hlsl
@@ -65,6 +66,13 @@ class LetsDrawSomeStuff
 	XMFLOAT4X4 vMatrix;
 	XMFLOAT4X4 pMatrix;
 	}myMatrices;
+
+	// Lights
+	struct Lights
+	{
+		XMFLOAT4 dLight[3];
+		XMFLOAT4 pLight[3];
+	}myLights;
 
 	float aspectR = 1.0f;
 
@@ -175,29 +183,29 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(box);
+			bDesc.ByteWidth = sizeof(stoneHenge);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = box;
+			subData.pSysMem = stoneHenge;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(box);
+			numVertices = ARRAYSIZE(stoneHenge);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(TexturedBox_indicies);
+			 bDesc.ByteWidth = sizeof(StoneHenge_indicies);
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = TexturedBox_indicies;
+			subData.pSysMem = StoneHenge_indicies;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(TexturedBox_indicies);
+			numIndices = ARRAYSIZE(StoneHenge_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -222,24 +230,18 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
 
-			//Load Texture
-			//myTexture.Width = StoneHenge_width;
-			//myTexture.Height = StoneHenge_height;
-			//myTexture.NumPixels = StoneHenge_numpixels;
-			//myTexture.NumLevels = StoneHenge_numlevels;
-			//myTexture.Offsets = StoneHenge_leveloffsets;
-			//myTexture.Raster = StoneHenge_pixels;
+			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			bDesc.ByteWidth = sizeof(Lights);
+			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-			//bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-			//bDesc.ByteWidth = sizeof(tx);
-			//bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-			//bDesc.StructureByteStride = 0;
-			//bDesc.Usage = D3D11_USAGE_DYNAMIC;
-
-			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &txBuffer);
+			hr = myDevice->CreateBuffer(&bDesc, nullptr, &lightBuffer);
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"StoneHenge.dds", nullptr, &textureBox);
+
+			//hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
 
 			// Create sample state
 			D3D11_SAMPLER_DESC sampDesc = {};
@@ -272,10 +274,11 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (vShader) vShader->Release();
 	if (pShader) pShader->Release();
 	if (cBuffer) cBuffer->Release();
-	//if (samplerLin) samplerLin->Release();
+	if (lightBuffer) lightBuffer->Release();
+	if (samplerLin) samplerLin->Release();
 
 	// release shader resource
-	//if (textureBox) textureBox->Release();
+	if (textureBox) textureBox->Release();
 
 
 
@@ -331,9 +334,7 @@ void LetsDrawSomeStuff::Render()
 			myContext->DrawIndexed(numIndices, 0, 0);
 
 			//World Matrix
-			static float rot = 0; rot += 0.001f;
 			XMMATRIX temp = XMMatrixIdentity();
-			temp = XMMatrixMultiply(temp, XMMatrixRotationY(rot));
 			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
 			//View Matrix
@@ -403,15 +404,29 @@ void LetsDrawSomeStuff::Render()
 
 			myContext->Unmap(cBuffer, 0);
 
+			// Light Data
+			myLights.dLight[0] = { 0, 0, 0, 1.0f };
+			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
+			myLights.dLight[2] = { 0.752f, 0.752f, 0.941f, 1 };
+			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
+			temp2 = XMVector4Normalize(temp2);
+			XMStoreFloat4(&myLights.dLight[1], temp2);
+
+			myLights.pLight[0] = { -1.0f, 0.5f, 1.0f, 1.0f };
+			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			myLights.pLight[2] = { 1,1,0,1 };
+
+			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
+			XMStoreFloat4(&myLights.pLight[1], temp2);
+
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
 			//connect constant buffer to pipeline
-			ID3D11Buffer * constants[] = { cBuffer };
-			myContext->VSSetConstantBuffers(0, 1, constants);
-
-			//myContext->Map(txBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			//*((tx*)(gpuBuffer.pData)) = myTexture;
-
-			//myContext->Unmap(txBuffer, 0);
-			//myContext->PSSetConstantBuffers(0, 1, &txBuffer);
+			ID3D11Buffer * constants[] = { cBuffer, lightBuffer };
+			myContext->VSSetConstantBuffers(0, 2, constants);
 
 			//dds
 			myContext->PSSetShaderResources(0, 1, &textureBox);

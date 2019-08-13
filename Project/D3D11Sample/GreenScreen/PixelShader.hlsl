@@ -1,7 +1,8 @@
 struct OutputVertex
 {
-	float4 pos : SV_POSITION;
+    float4 pos : SV_POSITION;
     float2 uv : TEXCOORD0;
+    float4 normal : NORMAL0;
     float4 color : COLOR0;
 };
 
@@ -10,5 +11,5 @@ SamplerState samLinear : register(s0);
 
 float4 main(OutputVertex inputPixel) : SV_Target
 {
-    return txDiffuse.Sample(samLinear, inputPixel.uv) /** inputPixel.color*/;
+    return txDiffuse.Sample(samLinear, inputPixel.uv) * inputPixel.color;
 }
