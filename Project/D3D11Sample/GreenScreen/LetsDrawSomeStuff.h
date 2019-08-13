@@ -86,6 +86,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			mySurface->GetContext((void**)&myContext);
 
 			// TODO: Create new DirectX stuff here! (Buffers, Shaders, Layouts, Views, Textures, etc...)
+			mySurface->GetAspectRatio(aspectR);
+
 			//load onto card
 			D3D11_BUFFER_DESC bDesc = {};
 			D3D11_SUBRESOURCE_DATA subData = {};
@@ -263,6 +265,9 @@ void LetsDrawSomeStuff::Render()
 			//connect constant buffer to pipeline
 			ID3D11Buffer * constants[] = { cBuffer };
 			myContext->VSSetConstantBuffers(0, 1, constants);
+
+			//Camera controls
+
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
