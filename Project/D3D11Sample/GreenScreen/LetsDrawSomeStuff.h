@@ -17,8 +17,7 @@
 
 // models and textures
 #include "StoneHenge.h"
-#include "StoneHenge_Texture.h"
-
+#include "Assets/Hyrule_Castle.h"
 
 #include "Assets/TexturedBox.h"
 
@@ -180,32 +179,53 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 				stoneHenge[i].color = { 0,0,0,1 };
 			}
 
+			//Hyrule_Castle
+			Vertex hyruleCastle[ARRAYSIZE(Hyrule_Castle_data)];
+			for (int i = 0; i < ARRAYSIZE(Hyrule_Castle_data); ++i)
+			{
+				hyruleCastle[i].pos.x = Hyrule_Castle_data[i].pos[0] * 0.1f;
+				hyruleCastle[i].pos.y = Hyrule_Castle_data[i].pos[1] * 0.1f;
+				hyruleCastle[i].pos.z = Hyrule_Castle_data[i].pos[2] * 0.1f;
+				hyruleCastle[i].pos.w = 1.0f;
+
+				hyruleCastle[i].uv.x = Hyrule_Castle_data[i].uvw[0];
+				hyruleCastle[i].uv.y = Hyrule_Castle_data[i].uvw[1];
+
+				hyruleCastle[i].normal.x = Hyrule_Castle_data[i].nrm[0];
+				hyruleCastle[i].normal.y = Hyrule_Castle_data[i].nrm[1];
+				hyruleCastle[i].normal.z = Hyrule_Castle_data[i].nrm[2];
+				hyruleCastle[i].normal.w = 0.0f;
+
+				hyruleCastle[i].color = { 0,0,0,1 };
+
+			}
+
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(stoneHenge);
+			bDesc.ByteWidth = sizeof(hyruleCastle);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = stoneHenge;
+			subData.pSysMem = hyruleCastle;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(stoneHenge);
+			numVertices = ARRAYSIZE(hyruleCastle);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(StoneHenge_indicies);
+			 bDesc.ByteWidth = sizeof(Hyrule_Castle_indicies);
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = StoneHenge_indicies;
+			subData.pSysMem = Hyrule_Castle_indicies;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(StoneHenge_indicies);
+			numIndices = ARRAYSIZE(Hyrule_Castle_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -239,7 +259,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &lightBuffer);
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"StoneHenge.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Castle_Medium.dds", nullptr, &textureBox);
 
 			//hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
 
