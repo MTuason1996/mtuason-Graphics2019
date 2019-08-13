@@ -1,20 +1,14 @@
 struct OutputVertex
 {
 	float4 pos : SV_POSITION;
-	float4 color : OCOLOR;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR0;
 };
 
-// SHADER_VARS : register (b0)
-//{
-//	unsigned int txWidth;
-//	unsigned int txHeight;
-//	unsigned int txNumPixels;
-//	unsigned int txNumLevels;
-//	const unsigned int* txOffsets;
-//	const unsigned int* txRaster;
-//}
+Texture2D txDiffuse : register(t0);
+SamplerState samLinear : register(s0);
 
 float4 main(OutputVertex inputPixel) : SV_Target
 {
-	return float4(0.5f, 0.23f, 0.67f, 1);
+    return txDiffuse.Sample(samLinear, inputPixel.uv) /** inputPixel.color*/;
 }

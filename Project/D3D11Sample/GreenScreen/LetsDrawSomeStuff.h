@@ -19,12 +19,14 @@
 #include "StoneHenge.h"
 #include "StoneHenge_Texture.h"
 
+
 #include "Assets/TexturedBox.h"
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
 
 using namespace DirectX;
+
 
 // Simple Container class to make life easier/cleaner
 class LetsDrawSomeStuff
@@ -48,14 +50,13 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				vBuffer = nullptr;
 	ID3D11Buffer*				iBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
-	//ID3D11Buffer*				txBuffer = nullptr;
 	ID3D11InputLayout*			vLayout = nullptr;
 	ID3D11VertexShader*			vShader = nullptr;
 	ID3D11PixelShader*			pShader = nullptr; //hlsl
 
-	////Textures
-	//ID3D11ShaderResourceView*	textureBox = nullptr;
-	//ID3D11SamplerState*			samplerLin = nullptr;
+	//Textures
+	ID3D11ShaderResourceView*	textureBox = nullptr;
+	ID3D11SamplerState*			samplerLin = nullptr;
 
 	// Math
 	struct WVP
@@ -64,17 +65,6 @@ class LetsDrawSomeStuff
 	XMFLOAT4X4 vMatrix;
 	XMFLOAT4X4 pMatrix;
 	}myMatrices;
-
-	// texture loading
-	//struct tx
-	//{
-	//	unsigned int Width = 0;
-	//	unsigned int Height = 0;
-	//	unsigned int NumPixels = 0;
-	//	unsigned int NumLevels = 0;
-	//	const unsigned int* Offsets = nullptr;
-	//	const unsigned int* Raster = nullptr;
-	//}myTexture;
 
 	float aspectR = 1.0f;
 
@@ -142,25 +132,25 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			};
 
-			////box
-			//Vertex box[ARRAYSIZE(TexturedBox_data)];
-			//for (int i = 0; i < ARRAYSIZE(TexturedBox_data); ++i)
-			//{
-			//	box[i].pos.x = TexturedBox_data[i].pos[0];
-			//	box[i].pos.y = TexturedBox_data[i].pos[1];
-			//	box[i].pos.z = TexturedBox_data[i].pos[2];
-			//	box[i].pos.w = 1.0f;
+			//box
+			Vertex box[ARRAYSIZE(TexturedBox_data)];
+			for (int i = 0; i < ARRAYSIZE(TexturedBox_data); ++i)
+			{
+				box[i].pos.x = TexturedBox_data[i].pos[0];
+				box[i].pos.y = TexturedBox_data[i].pos[1];
+				box[i].pos.z = TexturedBox_data[i].pos[2];
+				box[i].pos.w = 1.0f;
 
-			//	box[i].uv.x = TexturedBox_data[i].uvw[0];
-			//	box[i].uv.y = TexturedBox_data[i].uvw[1];
+				box[i].uv.x = TexturedBox_data[i].uvw[0];
+				box[i].uv.y = TexturedBox_data[i].uvw[1];
 
-			//	box[i].normal.x = TexturedBox_data[i].nrm[0];
-			//	box[i].normal.y = TexturedBox_data[i].nrm[1];
-			//	box[i].normal.z = TexturedBox_data[i].nrm[2];
-			//	box[i].normal.w = 0.0f;
+				box[i].normal.x = TexturedBox_data[i].nrm[0];
+				box[i].normal.y = TexturedBox_data[i].nrm[1];
+				box[i].normal.z = TexturedBox_data[i].nrm[2];
+				box[i].normal.w = 0.0f;
 
-			//	box[i].color = { 0,0,0,1 };
-			//}
+				box[i].color = { 0,0,0,1 };
+			}
 
 			//StoneHenge
 			Vertex stoneHenge[ARRAYSIZE(StoneHenge_data)];
@@ -185,29 +175,29 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(stoneHenge);
+			bDesc.ByteWidth = sizeof(box);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = stoneHenge;
+			subData.pSysMem = box;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(stoneHenge);
+			numVertices = ARRAYSIZE(box);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(StoneHenge_indicies);
+			 bDesc.ByteWidth = sizeof(TexturedBox_indicies);
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = StoneHenge_indicies;
+			subData.pSysMem = TexturedBox_indicies;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(StoneHenge_indicies);
+			numIndices = ARRAYSIZE(TexturedBox_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -246,21 +236,21 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			//bDesc.StructureByteStride = 0;
 			//bDesc.Usage = D3D11_USAGE_DYNAMIC;
 
-			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
+			//hr = myDevice->CreateBuffer(&bDesc, nullptr, &txBuffer);
 
 
-			//hr = CreateDDSTextureFromFile(myDevice, L"StoneHenge.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
 
-			//// Create sample state
-			//D3D11_SAMPLER_DESC sampDesc = {};
-			//sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-			//sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-			//sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-			//sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-			//sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
-			//sampDesc.MinLOD = 0;
-			//sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
-			//hr = myDevice->CreateSamplerState(&sampDesc, &samplerLin);
+			// Create sample state
+			D3D11_SAMPLER_DESC sampDesc = {};
+			sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+			sampDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+			sampDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+			sampDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+			sampDesc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+			sampDesc.MinLOD = 0;
+			sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
+			hr = myDevice->CreateSamplerState(&sampDesc, &samplerLin);
 
 
 		}
@@ -318,7 +308,7 @@ void LetsDrawSomeStuff::Render()
 			myContext->OMSetRenderTargets(1, targets, myDepthStencilView);
 
 			// Clear the screen to green
-			const float color[] = { 0, 1, 0.5f, 1 };
+			const float color[] = { 0, 0, 0.2f, 1 };
 			myContext->ClearRenderTargetView(myRenderTargetView, color);
 
 			// TODO: Set your shaders, Update & Set your constant buffers, Attach your vertex & index buffers, Set your InputLayout & Topology & Draw!
@@ -341,7 +331,7 @@ void LetsDrawSomeStuff::Render()
 			myContext->DrawIndexed(numIndices, 0, 0);
 
 			//World Matrix
-			static float rot = 0; rot += 0.0001f;
+			static float rot = 0; rot += 0.001f;
 			XMMATRIX temp = XMMatrixIdentity();
 			temp = XMMatrixMultiply(temp, XMMatrixRotationY(rot));
 			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
@@ -349,8 +339,57 @@ void LetsDrawSomeStuff::Render()
 			//View Matrix
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 15, -35));
+
+			//Camera controls
+			static float xAxisT = 0;
+			static float xAxisR = 0;
+			static float yAxisR = 0;
+			static float yAxisT = 0;
+			
+			static float zAxisT = 0;
+
+			//Translate
+			if (GetAsyncKeyState('W'))
+				zAxisT += 0.1f;
+			if (GetAsyncKeyState('S'))
+				zAxisT -= 0.1f;
+			if (GetAsyncKeyState('A'))
+				xAxisT -= 0.1f;
+			if (GetAsyncKeyState('D'))
+				xAxisT += 0.1f;
+			if (GetAsyncKeyState(VK_SPACE) && GetAsyncKeyState(VK_LSHIFT))
+				yAxisT -= 0.1f;
+			else if (GetAsyncKeyState(VK_SPACE))
+				yAxisT += 0.1f;
+
+			//Rotate
+			if (GetAsyncKeyState('K'))
+				xAxisR += 0.1f;
+			if (GetAsyncKeyState('I'))
+				xAxisR -= 0.1f;
+			if (GetAsyncKeyState('J'))
+				yAxisR -= 0.1f;
+			if (GetAsyncKeyState('L'))
+				yAxisR += 0.1f;
+
+			//reset position and rotation
+			if (GetAsyncKeyState('R'))
+			{
+				xAxisT = 0;
+				yAxisT = 0;
+				zAxisT = 0;
+				xAxisR = 0;
+				yAxisR = 0;
+			}
+			//rotation
+			temp = XMMatrixMultiply(XMMatrixRotationX(XMConvertToRadians(xAxisR)), temp);
+			temp = XMMatrixMultiply(temp, XMMatrixRotationY(XMConvertToRadians(yAxisR)));
+			//translation
+			temp = XMMatrixMultiply(XMMatrixTranslation(xAxisT, 0, zAxisT), temp);
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, yAxisT, 0));
+
+
 			temp = XMMatrixInverse(nullptr, temp);
-			//temp = XMMatrixLookAtLH({ 2,1,-3 }, { 0,0,0 }, { 0,1,0 });
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
 			//Projection Matrix
@@ -375,11 +414,8 @@ void LetsDrawSomeStuff::Render()
 			//myContext->PSSetConstantBuffers(0, 1, &txBuffer);
 
 			//dds
-			//myContext->PSSetShaderResources(0, 1, &textureBox);
-			//myContext->PSSetSamplers(0, 1, &samplerLin);
-
-			//Camera controls
-
+			myContext->PSSetShaderResources(0, 1, &textureBox);
+			myContext->PSSetSamplers(0, 1, &samplerLin);
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
