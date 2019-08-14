@@ -1,3 +1,3 @@
 ﻿  main.cpp
-c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(373): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(305): warning C4305: 'initializing': truncation from 'double' to 'float'
   GreenScreen.vcxproj -> C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\GreenScreen.exe

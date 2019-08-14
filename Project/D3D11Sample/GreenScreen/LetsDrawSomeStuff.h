@@ -16,10 +16,7 @@
 #include "DDSTextureLoader.h"
 
 // models and textures
-#include "StoneHenge.h"
-#include "Assets/Hyrule_Castle.h"
-
-#include "Assets/TexturedBox.h"
+#include "Assets/bridge.h"
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
@@ -114,118 +111,53 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
-			Vertex pyramid[12] = 
+			// kokiri bridge
+			Vertex kokiriBridge[ARRAYSIZE(bridge_data)];
+			for (int i = 0; i < ARRAYSIZE(bridge_data); ++i)
 			{
-				// pos							uv		normal			color
-				//front
-				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
-				{ {0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
-				{ {-0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+				kokiriBridge[i].pos.x = bridge_data[i].pos[0] * 0.1f;
+				kokiriBridge[i].pos.y = bridge_data[i].pos[1] * 0.1f;
+				kokiriBridge[i].pos.z = bridge_data[i].pos[2] * 0.1f;
+				kokiriBridge[i].pos.w = 1.0f;
 
-				//right
-				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
-				{ {0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
-				{ {0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+				kokiriBridge[i].uv.x = bridge_data[i].uvw[0];
+				kokiriBridge[i].uv.y = bridge_data[i].uvw[1];
 
-				//back
-				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
-				{ {-0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
-				{ {0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
+				kokiriBridge[i].normal.x = bridge_data[i].nrm[0];
+				kokiriBridge[i].normal.y = bridge_data[i].nrm[1];
+				kokiriBridge[i].normal.z = bridge_data[i].nrm[2];
+				kokiriBridge[i].normal.w = 0.0f;
 
-				//left
-				{ {0, 1.0f, 0, 1},				{0, 0},	{0, 0, 0, 1},	{1, 0, 0, 1} },
-				{ {-0.25f, -0.25f, -0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 1, 0, 1} },
-				{ {-0.25f, -0.25f, 0.25f, 1},	{0, 0},	{0, 0, 0, 1},	{0, 0, 1, 1} },
-
-			};
-
-			//box
-			Vertex box[ARRAYSIZE(TexturedBox_data)];
-			for (int i = 0; i < ARRAYSIZE(TexturedBox_data); ++i)
-			{
-				box[i].pos.x = TexturedBox_data[i].pos[0];
-				box[i].pos.y = TexturedBox_data[i].pos[1];
-				box[i].pos.z = TexturedBox_data[i].pos[2];
-				box[i].pos.w = 1.0f;
-
-				box[i].uv.x = TexturedBox_data[i].uvw[0];
-				box[i].uv.y = TexturedBox_data[i].uvw[1];
-
-				box[i].normal.x = TexturedBox_data[i].nrm[0];
-				box[i].normal.y = TexturedBox_data[i].nrm[1];
-				box[i].normal.z = TexturedBox_data[i].nrm[2];
-				box[i].normal.w = 0.0f;
-
-				box[i].color = { 0,0,0,1 };
-			}
-
-			//StoneHenge
-			Vertex stoneHenge[ARRAYSIZE(StoneHenge_data)];
-			for (int i = 0; i < ARRAYSIZE(StoneHenge_data); ++i)
-			{
-				stoneHenge[i].pos.x = StoneHenge_data[i].pos[0] * 0.1f;
-				stoneHenge[i].pos.y = StoneHenge_data[i].pos[1] * 0.1f;
-				stoneHenge[i].pos.z = StoneHenge_data[i].pos[2] * 0.1f;
-				stoneHenge[i].pos.w = 1.0f;
-
-				stoneHenge[i].uv.x = StoneHenge_data[i].uvw[0];
-				stoneHenge[i].uv.y = StoneHenge_data[i].uvw[1];
-
-				stoneHenge[i].normal.x = StoneHenge_data[i].nrm[0];
-				stoneHenge[i].normal.y = StoneHenge_data[i].nrm[1];
-				stoneHenge[i].normal.z = StoneHenge_data[i].nrm[2];
-				stoneHenge[i].normal.w = 0.0f;
-
-				stoneHenge[i].color = { 0,0,0,1 };
-			}
-
-			//Hyrule_Castle
-			Vertex hyruleCastle[ARRAYSIZE(Hyrule_Castle_data)];
-			for (int i = 0; i < ARRAYSIZE(Hyrule_Castle_data); ++i)
-			{
-				hyruleCastle[i].pos.x = Hyrule_Castle_data[i].pos[0] * 0.1f;
-				hyruleCastle[i].pos.y = Hyrule_Castle_data[i].pos[1] * 0.1f;
-				hyruleCastle[i].pos.z = Hyrule_Castle_data[i].pos[2] * 0.1f;
-				hyruleCastle[i].pos.w = 1.0f;
-
-				hyruleCastle[i].uv.x = Hyrule_Castle_data[i].uvw[0];
-				hyruleCastle[i].uv.y = Hyrule_Castle_data[i].uvw[1];
-
-				hyruleCastle[i].normal.x = Hyrule_Castle_data[i].nrm[0];
-				hyruleCastle[i].normal.y = Hyrule_Castle_data[i].nrm[1];
-				hyruleCastle[i].normal.z = Hyrule_Castle_data[i].nrm[2];
-				hyruleCastle[i].normal.w = 0.0f;
-
-				hyruleCastle[i].color = { 0,0,0,1 };
+				kokiriBridge[i].color = { 0,0,0,1 };
 
 			}
 
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(hyruleCastle);
+			bDesc.ByteWidth = sizeof(kokiriBridge);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = hyruleCastle;
+			subData.pSysMem = kokiriBridge;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(hyruleCastle);
+			numVertices = ARRAYSIZE(kokiriBridge);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(Hyrule_Castle_indicies);
+			 bDesc.ByteWidth = sizeof(bridge_indicies);
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = Hyrule_Castle_indicies;
+			subData.pSysMem = bridge_indicies;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(Hyrule_Castle_indicies);
+			numIndices = ARRAYSIZE(bridge_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -259,7 +191,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &lightBuffer);
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Castle_Medium.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/bridge.dds", nullptr, &textureBox);
 
 			//hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
 
@@ -330,7 +262,7 @@ void LetsDrawSomeStuff::Render()
 			ID3D11RenderTargetView* const targets[] = { myRenderTargetView };
 			myContext->OMSetRenderTargets(1, targets, myDepthStencilView);
 
-			// Clear the screen to green
+			// Clear the screen
 			const float color[] = { 0, 0, 0.2f, 1 };
 			myContext->ClearRenderTargetView(myRenderTargetView, color);
 
@@ -359,7 +291,7 @@ void LetsDrawSomeStuff::Render()
 
 			//View Matrix
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
-			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 2, -5));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 15, -15));
 
 			//Camera controls
 			static float xAxisT = 0;
@@ -370,7 +302,7 @@ void LetsDrawSomeStuff::Render()
 			static float zAxisT = 0;
 
 			//Translate
-			float tSpeed = 0.0075;
+			float tSpeed = 0.00075;
 			if (GetAsyncKeyState('W'))
 				zAxisT += tSpeed;
 			if (GetAsyncKeyState('S'))
@@ -385,7 +317,7 @@ void LetsDrawSomeStuff::Render()
 				yAxisT += tSpeed;
 
 			//Rotate
-			float rSpeed = 0.1f;
+			float rSpeed = 0.01f;
 			if (GetAsyncKeyState('K'))
 				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
@@ -429,16 +361,15 @@ void LetsDrawSomeStuff::Render()
 			// Light Data
 			myLights.dLight[0] = { 0, 0, 0, 1.0f };
 			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
-			myLights.dLight[2] = { 0.752f, 0.752f, 0.941f, 1 };
+			myLights.dLight[2] = { 0.32f, 0.942f, 0.762f,1 };
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
 
-			myLights.pLight[0] = { -1.0f, 0.5f, 1.0f, 1.0f };
+			myLights.pLight[0] = { 0.0f, 8.0f, 0.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			myLights.pLight[2] = { 1,1,0,1 };
-			myLights.pLight[3].x = 4.0f;
-
+			myLights.pLight[2] = { 1.0f, 0, 0, 1 };
+			myLights.pLight[3].x = 20.0f;
 			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
 			XMStoreFloat4(&myLights.pLight[1], temp2);
 

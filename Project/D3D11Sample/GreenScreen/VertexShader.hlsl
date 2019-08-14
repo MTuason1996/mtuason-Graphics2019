@@ -55,7 +55,7 @@ OutputVertex main(InputVertex input)
     float attenuation = 1.0f - saturate(length(pointSubSurf) / pLight[3].x);
     attenuation *= attenuation;
 
-    float lightRPoint = (saturate(dot(pLightFacing, output.normal)) + 0.25f) * attenuation;
+    float lightRPoint = (saturate(dot(pLightFacing, output.normal)) + 0.5f) * attenuation;
     float4 luminencePoint = lerp(float4(0, 0, 0, 1), pLight[2], lightRPoint);
 
 
