@@ -366,12 +366,18 @@ void LetsDrawSomeStuff::Render()
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
 
-			myLights.pLight[0] = { 0.0f, 8.0f, 0.0f, 1.0f };
+			myLights.pLight[0] = { 4.0f, 4.0f, 0.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			myLights.pLight[2] = { 1.0f, 0, 0, 1 };
-			myLights.pLight[3].x = 20.0f;
+			myLights.pLight[3].x = 10.0f;
 			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
 			XMStoreFloat4(&myLights.pLight[1], temp2);
+
+			//rotate point light
+			static float rot = 0; rot += 0.01f;
+			temp2 = { myLights.pLight[0].x, myLights.pLight[0].y, myLights.pLight[0].z, myLights.pLight[0].w, };
+			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rot)));
+			XMStoreFloat4(&myLights.pLight[0], temp2);
 
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
