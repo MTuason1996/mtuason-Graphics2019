@@ -363,20 +363,38 @@ void LetsDrawSomeStuff::Render()
 			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
 			myLights.dLight[2] = { 0.32f, 0.942f, 0.762f,1 };
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
+			//Rotate directional light
+			static float rotD = 0.0f; rotD += 0.01f;
+			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rotD)));
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
 
-			myLights.pLight[0] = { 4.0f, 4.0f, 0.0f, 1.0f };
+			myLights.pLight[0] = { 0.0f, 2.0f, 0.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
 			myLights.pLight[2] = { 1.0f, 0, 0, 1 };
 			myLights.pLight[3].x = 10.0f;
 			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
 			XMStoreFloat4(&myLights.pLight[1], temp2);
 
-			//rotate point light
-			static float rot = 0; rot += 0.01f;
+			//translate point light
+			static float transP = 0; 
+			static bool moveUp = true;
+			if (moveUp)
+			{
+				if (transP < 12.0f)
+					transP += 0.001f;
+				else
+					moveUp = false;
+			}
+			else
+			{
+				if (transP > -12.0f)
+					transP -= 0.001f;
+				else
+					moveUp = true;
+			}
 			temp2 = { myLights.pLight[0].x, myLights.pLight[0].y, myLights.pLight[0].z, myLights.pLight[0].w, };
-			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rot)));
+			temp2 = XMVector4Transform(temp2, XMMatrixTranslation(0, 0, transP));
 			XMStoreFloat4(&myLights.pLight[0], temp2);
 
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
