@@ -348,7 +348,18 @@ void LetsDrawSomeStuff::Render()
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
 			//Projection Matrix
-			temp = XMMatrixPerspectiveFovLH(3.14f / 2.0f, aspectR, 0.1f, 1000.0f);
+			static float fov = 90;
+			if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_LSHIFT))
+			{
+				if (fov < 90.0f)
+					fov += 0.01f;
+			}
+			else if (GetAsyncKeyState(VK_CONTROL))
+			{
+				if (fov > 30.0f)
+					fov -= 0.01f;
+			}
+			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
 
 
