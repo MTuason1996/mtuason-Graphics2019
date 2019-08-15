@@ -1,3 +1,4 @@
 ﻿  main.cpp
-c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(313): warning C4305: 'initializing': truncation from 'double' to 'float'
+c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(317): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(332): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   GreenScreen.vcxproj -> C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\GreenScreen.exe

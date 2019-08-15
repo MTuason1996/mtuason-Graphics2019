@@ -11,6 +11,7 @@
 // Include DirectX11 for interface access
 #include <d3d11.h>
 #include <DirectXMath.h>
+#include "XTime.h"
 
 // DDSTextureLoading
 #include "DDSTextureLoader.h"
@@ -72,6 +73,8 @@ class LetsDrawSomeStuff
 	}myLights;
 
 	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
+	XTime timer;
+
 
 
 	float aspectR = 1.0f;
@@ -107,6 +110,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			mySurface->GetContext((void**)&myContext);
 
 			// TODO: Create new DirectX stuff here! (Buffers, Shaders, Layouts, Views, Textures, etc...)
+			timer.Restart();
 			mySurface->GetAspectRatio(aspectR);
 
 			//load onto card
@@ -195,8 +199,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Spyro/HubTextures.dds", nullptr, &textureBox);
 
-			//hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
-
 			// Create sample state
 			D3D11_SAMPLER_DESC sampDesc = {};
 			sampDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
@@ -255,6 +257,7 @@ void LetsDrawSomeStuff::Render()
 		ID3D11DepthStencilView *myDepthStencilView = nullptr;
 		if (G_SUCCESS(mySurface->GetRenderTarget((void**)&myRenderTargetView)))
 		{
+			timer.Signal();
 			// Grab the Z Buffer if one was requested
 			if (G_SUCCESS(mySurface->GetDepthStencilView((void**)&myDepthStencilView)))
 			{
@@ -300,6 +303,7 @@ void LetsDrawSomeStuff::Render()
 			//-----------------------------------------------------------------------
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
+			XMMATRIX worldView = temp;
 
 			//Camera controls
 			static float xAxisT = 0;
@@ -310,7 +314,7 @@ void LetsDrawSomeStuff::Render()
 			static float zAxisT = 0;
 
 			//Translate
-			float tSpeed = 0.075;
+			float tSpeed = 5 * timer.SmoothDelta();
 			if (GetAsyncKeyState('W'))
 				zAxisT += tSpeed;
 			if (GetAsyncKeyState('S'))
@@ -325,7 +329,7 @@ void LetsDrawSomeStuff::Render()
 				yAxisT += tSpeed;
 
 			//Rotate
-			float rSpeed = 0.1f;
+			float rSpeed = 30 * timer.SmoothDelta();
 			if (GetAsyncKeyState('K'))
 				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
@@ -346,11 +350,22 @@ void LetsDrawSomeStuff::Render()
 			}
 			//rotation
 			temp = XMMatrixMultiply(XMMatrixRotationX(XMConvertToRadians(xAxisR)), temp);
-			temp = XMMatrixMultiply(temp, XMMatrixRotationY(XMConvertToRadians(yAxisR)));
+			temp = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(yAxisR)), temp);
+
+			// Call on rotation
+			//XMVECTOR newX = { 0 };
+			//XMVECTOR newY = { 0 };
+			//XMVector4Cross({ 0,1,0,0 }, temp.r[2], newX);
+			//XMVector4Cross(temp.r[2], newX, newY);
+
+			//temp.r[0] = XMVector4Normalize(newX);
+			//temp.r[1] = XMVector4Normalize(newY);
+			//temp.r[2] = XMVector4Normalize(temp.r[2]);
+
+
 			//translation
 			temp = XMMatrixMultiply(XMMatrixTranslation(xAxisT, 0, zAxisT), temp);
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, yAxisT, 0));
-
 
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);

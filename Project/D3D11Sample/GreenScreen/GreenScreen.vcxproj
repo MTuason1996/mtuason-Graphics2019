@@ -144,12 +144,14 @@
   <ItemGroup>
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="LetsDrawSomeStuff.h" />
+    <ClInclude Include="XTime.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\Gateware\Source\G_Graphics\GDirectX11Surface.cpp" />
     <ClCompile Include="..\..\Gateware\Source\G_System\GWindow.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="XTime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="PixelShader.hlsl">
