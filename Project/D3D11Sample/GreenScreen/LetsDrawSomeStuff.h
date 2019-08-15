@@ -66,8 +66,9 @@ class LetsDrawSomeStuff
 	// Lights
 	struct Lights
 	{
-		XMFLOAT4 dLight[3];
-		XMFLOAT4 pLight[4];
+		XMFLOAT4 dLight[3];			//directional light
+		XMFLOAT4 pLight[4];			//point light
+		XMFLOAT4 sLight[4];			//spot light
 	}myLights;
 
 	float aspectR = 1.0f;
@@ -302,7 +303,7 @@ void LetsDrawSomeStuff::Render()
 			static float zAxisT = 0;
 
 			//Translate
-			float tSpeed = 0.00075;
+			float tSpeed = 0.075;
 			if (GetAsyncKeyState('W'))
 				zAxisT += tSpeed;
 			if (GetAsyncKeyState('S'))
@@ -317,7 +318,7 @@ void LetsDrawSomeStuff::Render()
 				yAxisT += tSpeed;
 
 			//Rotate
-			float rSpeed = 0.01f;
+			float rSpeed = 0.1f;
 			if (GetAsyncKeyState('K'))
 				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
@@ -352,12 +353,12 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_LSHIFT))
 			{
 				if (fov < 90.0f)
-					fov += 0.01f;
+					fov += 0.1f;
 			}
 			else if (GetAsyncKeyState(VK_CONTROL))
 			{
 				if (fov > 30.0f)
-					fov -= 0.01f;
+					fov -= 0.1f;
 			}
 			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
@@ -369,20 +370,39 @@ void LetsDrawSomeStuff::Render()
 
 			myContext->Unmap(cBuffer, 0);
 
-			// Light Data
+			// Directional Light
+			XMFLOAT4 dColor = { 0.32f, 0.942f, 0.762f,1 };
+			static bool dToggle = true;
 			myLights.dLight[0] = { 0, 0, 0, 1.0f };
 			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
-			myLights.dLight[2] = { 0.32f, 0.942f, 0.762f,1 };
+			if (dToggle)
+				myLights.dLight[2] = dColor;
+			else
+				myLights.dLight[2] = { 0,0,0,0 };
+
+			if (GetAsyncKeyState('1') & 1)
+				dToggle = !dToggle;
+
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
 			//Rotate directional light
-			static float rotD = 0.0f; rotD += 0.01f;
+			static float rotD = 0.0f; rotD += 0.1f;
 			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rotD)));
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
 
+			// Point Light
+			XMFLOAT4 pColor = { 1.0f, 0, 0, 1 };
+			static bool pToggle = true;
 			myLights.pLight[0] = { 0.0f, 2.0f, 0.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
-			myLights.pLight[2] = { 1.0f, 0, 0, 1 };
+			if (pToggle)
+				myLights.pLight[2] = pColor;
+			else
+				myLights.pLight[2] = { 0,0,0,0 };
+
+			if (GetAsyncKeyState('2') & 1)
+				pToggle = !pToggle;
+		
 			myLights.pLight[3].x = 10.0f;
 			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
 			XMStoreFloat4(&myLights.pLight[1], temp2);
@@ -393,14 +413,14 @@ void LetsDrawSomeStuff::Render()
 			if (moveUp)
 			{
 				if (transP < 12.0f)
-					transP += 0.001f;
+					transP += 0.01f;
 				else
 					moveUp = false;
 			}
 			else
 			{
 				if (transP > -12.0f)
-					transP -= 0.001f;
+					transP -= 0.01f;
 				else
 					moveUp = true;
 			}
