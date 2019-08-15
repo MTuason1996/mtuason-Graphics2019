@@ -31,6 +31,7 @@ cbuffer lightVars : register(b1)
 {
     float4 dLight[3];
     float4 pLight[4];
+    float4 sLight[4];
 };
 
 OutputVertex main(InputVertex input)
@@ -52,14 +53,27 @@ OutputVertex main(InputVertex input)
     //PointLight
     float4 pointSubSurf = pLight[0] - output.pos;
     float4 pLightFacing = normalize(pointSubSurf);
-    float attenuation = 1.0f - saturate(length(pointSubSurf) / pLight[3].x);
-    attenuation *= attenuation;
+    float pAtt = 1.0f - saturate(length(pointSubSurf) / pLight[3].x);
+    pAtt *= pAtt;
 
-    float lightRPoint = (saturate(dot(pLightFacing, output.normal)) + 0.75f) * attenuation;
+    float lightRPoint = (saturate(dot(pLightFacing, output.normal)) + 0.75f) * pAtt;
     float4 luminencePoint = lerp(float4(0, 0, 0, 1), pLight[2], lightRPoint);
 
+    // Spot Light
+    float4 sLightFacing = normalize(sLight[0] - output.pos);
+    float surfaceRatio = saturate(dot(-sLightFacing, sLight[1]));
 
-    output.color = saturate(luminenceDir + luminencePoint);
+    //float sAtt = (surfaceRatio > sLight[3].x) ? 1 : 0;
+    float sAtt = 1.0 - saturate((sLight[3].x - surfaceRatio) / (sLight[3].x - sLight[3].y));
+    sAtt *= sAtt;
+    
+    float lightRSpot = (saturate(dot(sLightFacing, output.normal)) + 1.0f) * sAtt;
+    float4 luminenceSpot = lerp(float4(0, 0, 0, 1), sLight[2], lightRSpot);
+
+    
+
+
+    output.color = saturate(luminenceDir + luminencePoint + luminenceSpot);
 
 
 	output.pos = mul(viewMatrix, output.pos);

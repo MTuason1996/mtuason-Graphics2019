@@ -16,7 +16,7 @@
 #include "DDSTextureLoader.h"
 
 // models and textures
-#include "Assets/bridge.h"
+#include "Assets/Spyro/ArtisansHub.h"
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
@@ -71,6 +71,9 @@ class LetsDrawSomeStuff
 		XMFLOAT4 sLight[4];			//spot light
 	}myLights;
 
+	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
+
+
 	float aspectR = 1.0f;
 
 	Vertex * vertices;
@@ -112,53 +115,51 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
-			// kokiri bridge
-			Vertex kokiriBridge[ARRAYSIZE(bridge_data)];
-			for (int i = 0; i < ARRAYSIZE(bridge_data); ++i)
+			for (int i = 0; i < ARRAYSIZE(ArtisansHub_data); ++i)
 			{
-				kokiriBridge[i].pos.x = bridge_data[i].pos[0] * 0.1f;
-				kokiriBridge[i].pos.y = bridge_data[i].pos[1] * 0.1f;
-				kokiriBridge[i].pos.z = bridge_data[i].pos[2] * 0.1f;
-				kokiriBridge[i].pos.w = 1.0f;
+				artisansHub[i].pos.x = ArtisansHub_data[i].pos[0] * 0.1f;
+				artisansHub[i].pos.y = ArtisansHub_data[i].pos[1] * 0.1f;
+				artisansHub[i].pos.z = ArtisansHub_data[i].pos[2] * 0.1f;
+				artisansHub[i].pos.w = 1.0f;
 
-				kokiriBridge[i].uv.x = bridge_data[i].uvw[0];
-				kokiriBridge[i].uv.y = bridge_data[i].uvw[1];
+				artisansHub[i].uv.x = ArtisansHub_data[i].uvw[0];
+				artisansHub[i].uv.y = ArtisansHub_data[i].uvw[1];
 
-				kokiriBridge[i].normal.x = bridge_data[i].nrm[0];
-				kokiriBridge[i].normal.y = bridge_data[i].nrm[1];
-				kokiriBridge[i].normal.z = bridge_data[i].nrm[2];
-				kokiriBridge[i].normal.w = 0.0f;
+				artisansHub[i].normal.x = ArtisansHub_data[i].nrm[0];
+				artisansHub[i].normal.y = ArtisansHub_data[i].nrm[1];
+				artisansHub[i].normal.z = ArtisansHub_data[i].nrm[2];
+				artisansHub[i].normal.w = 0.0f;
 
-				kokiriBridge[i].color = { 0,0,0,1 };
+				artisansHub[i].color = { 0,0,0,1 };
 
 			}
 
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(kokiriBridge);
+			bDesc.ByteWidth = sizeof(Vertex) * ARRAYSIZE(ArtisansHub_data);
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = kokiriBridge;
+			subData.pSysMem = artisansHub;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(kokiriBridge);
+			numVertices = ARRAYSIZE(ArtisansHub_data);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(bridge_indicies);
+			 bDesc.ByteWidth = sizeof(ArtisansHub_indicies);
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = bridge_indicies;
+			subData.pSysMem = ArtisansHub_indicies;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(bridge_indicies);
+			numIndices = ARRAYSIZE(ArtisansHub_indicies);
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
@@ -192,7 +193,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &lightBuffer);
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/bridge.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Spyro/HubTextures.dds", nullptr, &textureBox);
 
 			//hr = CreateDDSTextureFromFile(myDevice, L"Assets/TreasureChestTexture.dds", nullptr, &textureBox);
 
@@ -232,6 +233,8 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 
 	// release shader resource
 	if (textureBox) textureBox->Release();
+
+	delete artisansHub;
 
 
 
@@ -286,13 +289,17 @@ void LetsDrawSomeStuff::Render()
 			// Draw
 			myContext->DrawIndexed(numIndices, 0, 0);
 
-			//World Matrix
+			//-----------------------------------------------------------------------
+			// World Matrix
+			//-----------------------------------------------------------------------
 			XMMATRIX temp = XMMatrixIdentity();
 			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
-			//View Matrix
+			//-----------------------------------------------------------------------
+			// View Matrix + camera controls
+			//-----------------------------------------------------------------------
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
-			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 15, -15));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
 
 			//Camera controls
 			static float xAxisT = 0;
@@ -348,7 +355,9 @@ void LetsDrawSomeStuff::Render()
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
-			//Projection Matrix
+			//-----------------------------------------------------------------------
+			// Projection Matrix
+			//-----------------------------------------------------------------------
 			static float fov = 90;
 			if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_LSHIFT))
 			{
@@ -363,18 +372,21 @@ void LetsDrawSomeStuff::Render()
 			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
 
-
+			// Attach matrices to cBuffer
 			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
 
 			myContext->Unmap(cBuffer, 0);
 
+			//-----------------------------------------------------------------------
 			// Directional Light
+			//-----------------------------------------------------------------------
 			XMFLOAT4 dColor = { 0.32f, 0.942f, 0.762f,1 };
-			static bool dToggle = true;
+			static bool dToggle = false;
 			myLights.dLight[0] = { 0, 0, 0, 1.0f };
 			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
+			//toggle dLight
 			if (dToggle)
 				myLights.dLight[2] = dColor;
 			else
@@ -385,16 +397,20 @@ void LetsDrawSomeStuff::Render()
 
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
 			//Rotate directional light
-			static float rotD = 0.0f; rotD += 0.1f;
-			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rotD)));
+			static float rotD = 0.0f; rotD += 0.5f;
+			temp2 = XMVector4Transform(temp2, XMMatrixRotationZ(XMConvertToRadians(rotD)));
+			// normalize
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
 
+			//-----------------------------------------------------------------------
 			// Point Light
+			//-----------------------------------------------------------------------
 			XMFLOAT4 pColor = { 1.0f, 0, 0, 1 };
-			static bool pToggle = true;
-			myLights.pLight[0] = { 0.0f, 2.0f, 0.0f, 1.0f };
+			static bool pToggle = false;
+			myLights.pLight[0] = { 0.0f, 0.5f, 0.0f, 1.0f };
 			myLights.pLight[1] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			//toggle pLight
 			if (pToggle)
 				myLights.pLight[2] = pColor;
 			else
@@ -403,24 +419,22 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState('2') & 1)
 				pToggle = !pToggle;
 		
-			myLights.pLight[3].x = 10.0f;
-			temp2 = { myLights.pLight[1].x, myLights.pLight[1].y, myLights.pLight[1].z, myLights.pLight[1].w, };
-			XMStoreFloat4(&myLights.pLight[1], temp2);
-
+			// point light radius
+			myLights.pLight[3].x = 5.0f;
 			//translate point light
 			static float transP = 0; 
 			static bool moveUp = true;
 			if (moveUp)
 			{
 				if (transP < 12.0f)
-					transP += 0.01f;
+					transP += 0.1f;
 				else
 					moveUp = false;
 			}
 			else
 			{
 				if (transP > -12.0f)
-					transP -= 0.01f;
+					transP -= 0.1f;
 				else
 					moveUp = true;
 			}
@@ -428,12 +442,66 @@ void LetsDrawSomeStuff::Render()
 			temp2 = XMVector4Transform(temp2, XMMatrixTranslation(0, 0, transP));
 			XMStoreFloat4(&myLights.pLight[0], temp2);
 
+			//-----------------------------------------------------------------------
+			// Spot Light
+			//-----------------------------------------------------------------------
+			XMFLOAT4 sColor = { 0.5f, 0.5f, 0, 1 };
+			static bool sToggle = true;
+			// position
+			myLights.sLight[0] = { 1.0f, 2.0f, -4.0f, 1.0f };
+			// direction
+			myLights.sLight[1] = {-0.577f, -0.577f, 0.577f, 0.0f};
+			// toggle sLight
+			if (sToggle)
+				myLights.sLight[2] = sColor;
+			else
+				myLights.sLight[2] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+			if (GetAsyncKeyState('3') & 1)
+				sToggle = !sToggle;
+
+			// innerConeRatio, outerConeRatio
+			myLights.sLight[3] = { 0.97f, 0.82f, 0, 0 };
+
+			temp2 = { myLights.sLight[1].x, myLights.sLight[1].y, myLights.sLight[1].z, myLights.sLight[1].w, };
+			// rotate direction of spotlight
+			static float rotS = 0.0f; rotS += 0.5f;
+			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rotS)));
+			// normalize direction
+			temp2 = XMVector4Normalize(temp2);
+			XMStoreFloat4(&myLights.sLight[1], temp2);
+			static float transS = 0;
+			static bool moveRight = true;
+			if (moveRight)
+			{
+				if (transS < 12.0f)
+					transS += 0.1f;
+				else
+					moveRight = false;
+			}
+			else
+			{
+				if (transS > -12.0f)
+					transS -= 0.1f;
+				else
+					moveRight = true;
+			}
+			temp2 = { myLights.sLight[0].x, myLights.sLight[0].y, myLights.sLight[0].z, myLights.sLight[0].w, };
+			temp2 = XMVector4Transform(temp2, XMMatrixTranslation(transS, 0, 0));
+			XMStoreFloat4(&myLights.sLight[0], temp2);
+
+
+			//-----------------------------------------------------------------------
+			// Constant Buffer connections
+			//-----------------------------------------------------------------------
+
+			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
 
 			myContext->Unmap(lightBuffer, 0);
 
-			//connect constant buffer to pipeline
+			//connect constant buffers to pipeline
 			ID3D11Buffer * constants[] = { cBuffer, lightBuffer };
 			myContext->VSSetConstantBuffers(0, 2, constants);
 
@@ -443,7 +511,7 @@ void LetsDrawSomeStuff::Render()
 
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
-			mySwapChain->Present(0, 0); // set first argument to 1 to enable vertical refresh sync with display
+			mySwapChain->Present(1, 0); // set first argument to 1 to enable vertical refresh sync with display
 
 			// Free any temp DX handles aquired this frame
 			myRenderTargetView->Release();
