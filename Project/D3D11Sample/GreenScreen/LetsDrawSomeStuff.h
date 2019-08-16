@@ -21,6 +21,7 @@
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
+#include "PS_BWshader.csh"
 
 using namespace DirectX;
 
@@ -42,6 +43,7 @@ class LetsDrawSomeStuff
 		XMFLOAT2 uv;
 		XMFLOAT4 normal;
 		XMFLOAT4 color;
+		XMFLOAT4 wPos;
 	};
 
 	ID3D11Buffer*				vBuffer = nullptr;
@@ -51,6 +53,7 @@ class LetsDrawSomeStuff
 	ID3D11InputLayout*			vLayout = nullptr;
 	ID3D11VertexShader*			vShader = nullptr;
 	ID3D11PixelShader*			pShader = nullptr; //hlsl
+	ID3D11PixelShader*			bwPsShader = nullptr;
 
 	//Textures
 	ID3D11ShaderResourceView*	textureBox = nullptr;
@@ -169,16 +172,18 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
 			 hr = myDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr, &pShader);
+			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bwPsShader);
 
 			//describe to d3d11
 			 D3D11_INPUT_ELEMENT_DESC ieDesc[] = 
 			 {
-				 {"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				 {"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				 {"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				 {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"WPOSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 			 };
-			hr = myDevice->CreateInputLayout(ieDesc, 4, VertexShader, sizeof(VertexShader), &vLayout);
+			hr = myDevice->CreateInputLayout(ieDesc, 5, VertexShader, sizeof(VertexShader), &vLayout);
 
 			//constant buffer
 			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -300,7 +305,15 @@ void LetsDrawSomeStuff::Render()
 			//Vertex Shader Stage
 			myContext->VSSetShader(vShader, 0, 0);
 			//Pixel Shader Stage
-			myContext->PSSetShader(pShader, 0, 0);
+			//toggle pixel shader
+			static bool psColor = true;
+			if (psColor)
+				myContext->PSSetShader(pShader, 0, 0);
+			else
+				myContext->PSSetShader(bwPsShader, 0, 0);
+
+			if (GetAsyncKeyState('4') & 1)
+				psColor = !psColor;
 
 			// Draw
 			myContext->DrawIndexed(numIndices, 0, 0);
@@ -465,8 +478,8 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState('3') & 1)
 				sToggle = !sToggle;
 
-			// innerConeRatio, outerConeRatio, distance
-			myLights.sLight[3] = { 0.97f, 0.82f, 10.0f, 0 };
+			// innerConeRatio, outerConeRatio, minDistance, maxDistance
+			myLights.sLight[3] = { 0.97f, 0.82f, 10.0f, 0.0f };
 
 			temp2 = { myLights.sLight[1].x, myLights.sLight[1].y, myLights.sLight[1].z, myLights.sLight[1].w };
 			// rotate direction of spotlight
@@ -499,12 +512,12 @@ void LetsDrawSomeStuff::Render()
 			// Specular values
 			//-----------------------------------------------------------------------
 			//specular Intensity
-			myLights.specular[0].x = 0.5f;
+			myLights.specular[0].x = 1.0f;
 			// specular Power
 			myLights.specular[0].y = 4.0f;
 
 			//-----------------------------------------------------------------------
-			// Constant Buffer connections
+			// Constant Buffer connection
 			//-----------------------------------------------------------------------
 
 			// Attach light to lightBuffer
@@ -514,8 +527,11 @@ void LetsDrawSomeStuff::Render()
 			myContext->Unmap(lightBuffer, 0);
 
 			//connect constant buffers to pipeline
-			ID3D11Buffer * constants[] = { cBuffer, lightBuffer };
-			myContext->VSSetConstantBuffers(0, 2, constants);
+			ID3D11Buffer * vConstants[] = { cBuffer };
+			myContext->VSSetConstantBuffers(0, 1, vConstants);
+
+			ID3D11Buffer * pConstants[] = { lightBuffer };
+			myContext->PSSetConstantBuffers(0, 1, pConstants);
 
 			//dds
 			myContext->PSSetShaderResources(0, 1, &textureBox);
