@@ -69,28 +69,29 @@ OutputVertex main(InputVertex input)
     float4 luminencePoint = lerp(float4(0, 0, 0, 1), pLight[2], lightRPoint);
 
     // Spot Light
-    float4 sLightFacing = normalize(sLight[0] - output.pos);
-    float surfaceRatio = saturate(dot(-sLightFacing, sLight[1]));
+    float4 luminenceSpot = float4(0, 0, 0, 0);
+    float d = length(sLight[0] - output.pos);
+    if(d <= sLight[3].z)
+    {
+        float4 sLightFacing = normalize(sLight[0] - output.pos);
+        float surfaceRatio = saturate(dot(-sLightFacing, sLight[1]));
 
-    float sAtt = 1.0 - saturate((sLight[3].x - surfaceRatio) / (sLight[3].x - sLight[3].y));
-    sAtt *= sAtt;
+        float sAtt = 1.0 - saturate((sLight[3].x - surfaceRatio) / (sLight[3].x - sLight[3].y));
+        sAtt *= sAtt;
     
-    float lightRSpot = (saturate(dot(sLightFacing, output.normal)) + 1.0f) * sAtt;
-    float4 luminenceSpot = lerp(float4(0, 0, 0, 1), sLight[2], lightRSpot);
+        float lightRSpot = (saturate(dot(sLightFacing, output.normal)) + 1.0f) * sAtt;
+        luminenceSpot = lerp(float4(0, 0, 0, 1), sLight[2], lightRSpot);
 
-	// specular Spot
-	float4 sLightHalfVec = normalize((-sLight[1]) + viewDir);
-	float sLightIntensity = saturate(pow(dot(output.normal, dLightHalfVec), specular[0].y));
-	luminenceSpot = saturate(luminenceSpot + (sLight[2] * specular[0].x * sLightIntensity));
-
+	    // specular Spot
+        float4 sLightHalfVec = normalize((-sLight[1]) + viewDir);
+        float sLightIntensity = saturate(pow(dot(output.normal, dLightHalfVec), specular[0].y));
+        luminenceSpot = saturate(luminenceSpot + (sLight[2] * specular[0].x * sLightIntensity));
+    }
 
     output.color = saturate(luminenceDir + luminencePoint + luminenceSpot);
 
-
-	output.pos = mul(viewMatrix, output.pos);
-	output.pos = mul(projMatrix, output.pos);
-
+    output.pos = mul(viewMatrix, output.pos);
+    output.pos = mul(projMatrix, output.pos);
 
     return output;
-
 }

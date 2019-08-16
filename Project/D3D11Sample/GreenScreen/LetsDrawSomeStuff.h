@@ -466,9 +466,9 @@ void LetsDrawSomeStuff::Render()
 				sToggle = !sToggle;
 
 			// innerConeRatio, outerConeRatio, distance
-			myLights.sLight[3] = { 0.97f, 0.82f, 100.0f, 0 };
+			myLights.sLight[3] = { 0.97f, 0.82f, 10.0f, 0 };
 
-			temp2 = { myLights.sLight[1].x, myLights.sLight[1].y, myLights.sLight[1].z, myLights.sLight[1].w, };
+			temp2 = { myLights.sLight[1].x, myLights.sLight[1].y, myLights.sLight[1].z, myLights.sLight[1].w };
 			// rotate direction of spotlight
 			static float rotS = 0.0f; rotS += 0.5f;
 			temp2 = XMVector4Transform(temp2, XMMatrixRotationY(XMConvertToRadians(rotS)));
