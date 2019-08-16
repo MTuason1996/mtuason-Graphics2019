@@ -70,6 +70,7 @@ class LetsDrawSomeStuff
 		XMFLOAT4 dLight[3];			//directional light
 		XMFLOAT4 pLight[4];			//point light
 		XMFLOAT4 sLight[4];			//spot light
+		XMFLOAT4 specular[2];
 	}myLights;
 
 	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
@@ -354,7 +355,8 @@ void LetsDrawSomeStuff::Render()
 			temp = XMMatrixMultiply(temp, XMMatrixRotationY(XMConvertToRadians(yAxisR)));
 			temp.r[3] = posVec;
 
-
+			//Grab cam position for specular
+			XMStoreFloat4(&myLights.specular[1], posVec);
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
@@ -493,6 +495,13 @@ void LetsDrawSomeStuff::Render()
 			temp2 = XMVector4Transform(temp2, XMMatrixTranslation(transS, 0, 0));
 			XMStoreFloat4(&myLights.sLight[0], temp2);
 
+			//-----------------------------------------------------------------------
+			// Specular values
+			//-----------------------------------------------------------------------
+			//specular Intensity
+			myLights.specular[0].x = 0.5f;
+			// specular Power
+			myLights.specular[0].y = 4.0f;
 
 			//-----------------------------------------------------------------------
 			// Constant Buffer connections
