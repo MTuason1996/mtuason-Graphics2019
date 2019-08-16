@@ -465,8 +465,8 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState('3') & 1)
 				sToggle = !sToggle;
 
-			// innerConeRatio, outerConeRatio
-			myLights.sLight[3] = { 0.97f, 0.82f, 0, 0 };
+			// innerConeRatio, outerConeRatio, distance
+			myLights.sLight[3] = { 0.97f, 0.82f, 100.0f, 0 };
 
 			temp2 = { myLights.sLight[1].x, myLights.sLight[1].y, myLights.sLight[1].z, myLights.sLight[1].w, };
 			// rotate direction of spotlight

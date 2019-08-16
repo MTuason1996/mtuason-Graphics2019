@@ -1,4 +1,6 @@
-﻿  main.cpp
+﻿  compilation header save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\GreenScreen\VertexShader.csh
+  compilation object save succeeded; see C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\VertexShader.cso
+  main.cpp
 c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(322): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
 c:\users\marct\desktop\mtuason-pp4\project\d3d11sample\greenscreen\letsdrawsomestuff.h(337): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   GreenScreen.vcxproj -> C:\Users\marct\Desktop\mtuason-pp4\Project\D3D11Sample\x64\Debug\GreenScreen.exe
