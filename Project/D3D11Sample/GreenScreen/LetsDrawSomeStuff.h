@@ -210,7 +210,19 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			sampDesc.MaxLOD = D3D11_FLOAT32_MAX;
 			hr = myDevice->CreateSamplerState(&sampDesc, &samplerLin);
 
+			//-----------------------------------------------------------------------
+			// World Matrix
+			//-----------------------------------------------------------------------
+			XMMATRIX temp = XMMatrixIdentity();
+			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
+			//-----------------------------------------------------------------------
+			// View Matrix + camera controls
+			//-----------------------------------------------------------------------
+			temp = XMMatrixRotationX(XMConvertToRadians(25));
+			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
+			temp = XMMatrixInverse(nullptr, temp);
+			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 		}
 	}
 }
@@ -293,25 +305,17 @@ void LetsDrawSomeStuff::Render()
 			myContext->DrawIndexed(numIndices, 0, 0);
 
 			//-----------------------------------------------------------------------
-			// World Matrix
+			// Camera Controls
 			//-----------------------------------------------------------------------
-			XMMATRIX temp = XMMatrixIdentity();
-			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
+			XMMATRIX temp = XMLoadFloat4x4(&myMatrices.vMatrix);
+			temp = XMMatrixInverse(nullptr, temp);
 
-			//-----------------------------------------------------------------------
-			// View Matrix + camera controls
-			//-----------------------------------------------------------------------
-			temp = XMMatrixRotationX(XMConvertToRadians(25));
-			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
-			XMMATRIX worldView = temp;
-
-			//Camera controls
-			static float xAxisT = 0;
-			static float xAxisR = 0;
-			static float yAxisR = 0;
-			static float yAxisT = 0;
+			float xAxisT = 0;
+			float xAxisR = 0;
+			float yAxisR = 0;
+			float yAxisT = 0;
 			
-			static float zAxisT = 0;
+			float zAxisT = 0;
 
 			//Translate
 			float tSpeed = 5 * timer.SmoothDelta();
@@ -329,7 +333,7 @@ void LetsDrawSomeStuff::Render()
 				yAxisT += tSpeed;
 
 			//Rotate
-			float rSpeed = 30 * timer.SmoothDelta();
+			float rSpeed = 120 * timer.SmoothDelta();
 			if (GetAsyncKeyState('K'))
 				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
@@ -339,33 +343,17 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState('L'))
 				yAxisR += rSpeed;
 
-			//reset position and rotation
-			if (GetAsyncKeyState('R'))
-			{
-				xAxisT = 0;
-				yAxisT = 0;
-				zAxisT = 0;
-				xAxisR = 0;
-				yAxisR = 0;
-			}
-			//rotation
-			temp = XMMatrixMultiply(XMMatrixRotationX(XMConvertToRadians(xAxisR)), temp);
-			temp = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(yAxisR)), temp);
-
-			// Call on rotation
-			//XMVECTOR newX = { 0 };
-			//XMVECTOR newY = { 0 };
-			//XMVector4Cross({ 0,1,0,0 }, temp.r[2], newX);
-			//XMVector4Cross(temp.r[2], newX, newY);
-
-			//temp.r[0] = XMVector4Normalize(newX);
-			//temp.r[1] = XMVector4Normalize(newY);
-			//temp.r[2] = XMVector4Normalize(temp.r[2]);
-
-
 			//translation
 			temp = XMMatrixMultiply(XMMatrixTranslation(xAxisT, 0, zAxisT), temp);
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, yAxisT, 0));
+			//rotation
+			temp = XMMatrixMultiply(XMMatrixRotationX(XMConvertToRadians(xAxisR)), temp);
+
+			XMVECTOR posVec = temp.r[3];
+			temp.r[3] = { 0,0,0,1 };
+			temp = XMMatrixMultiply(temp, XMMatrixRotationY(XMConvertToRadians(yAxisR)));
+			temp.r[3] = posVec;
+
 
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
@@ -412,8 +400,8 @@ void LetsDrawSomeStuff::Render()
 
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
 			//Rotate directional light
-			static float rotD = 0.0f; rotD += 0.5f;
-			temp2 = XMVector4Transform(temp2, XMMatrixRotationZ(XMConvertToRadians(rotD)));
+			//static float rotD = 0.0f; rotD += 0.5f;
+			//temp2 = XMVector4Transform(temp2, XMMatrixRotationZ(XMConvertToRadians(rotD)));
 			// normalize
 			temp2 = XMVector4Normalize(temp2);
 			XMStoreFloat4(&myLights.dLight[1], temp2);
