@@ -560,6 +560,9 @@ void LetsDrawSomeStuff::Render()
 			myContext->Map(timeBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((XMFLOAT4*)(gpuBuffer.pData)) = time;
 
+			myContext->Unmap(timeBuffer, 0);
+
+
 			//connect constant buffers to pipeline
 			ID3D11Buffer * vConstants[] = { cBuffer, timeBuffer };
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
