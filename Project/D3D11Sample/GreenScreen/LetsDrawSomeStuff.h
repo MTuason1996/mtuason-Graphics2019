@@ -22,6 +22,7 @@
 #include "VertexShader.csh"
 #include "PixelShader.csh"
 #include "PS_BWshader.csh"
+#include "VS_sinShader.csh"
 
 using namespace DirectX;
 
@@ -50,10 +51,12 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				iBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
 	ID3D11Buffer*				lightBuffer = nullptr;
+	ID3D11Buffer*				timeBuffer = nullptr;
 	ID3D11InputLayout*			vLayout = nullptr;
 	ID3D11VertexShader*			vShader = nullptr;
+	ID3D11VertexShader*			sinVShader = nullptr;
 	ID3D11PixelShader*			pShader = nullptr; //hlsl
-	ID3D11PixelShader*			bwPsShader = nullptr;
+	ID3D11PixelShader*			bw_PShader = nullptr;
 
 	//Textures
 	ID3D11ShaderResourceView*	textureBox = nullptr;
@@ -171,8 +174,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
+			 hr = myDevice->CreateVertexShader(VS_sinShader, sizeof(VS_sinShader), nullptr, &sinVShader);
 			 hr = myDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr, &pShader);
-			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bwPsShader);
+			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bw_PShader);
 
 			//describe to d3d11
 			 D3D11_INPUT_ELEMENT_DESC ieDesc[] = 
@@ -181,11 +185,11 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 				{"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 				{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"WPOSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+				{"WPOSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 			 };
 			hr = myDevice->CreateInputLayout(ieDesc, 5, VertexShader, sizeof(VertexShader), &vLayout);
 
-			//constant buffer
+			//Matrix constant buffer
 			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 			bDesc.ByteWidth = sizeof(WVP);
 			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -194,6 +198,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &cBuffer);
 
+			// Light constant buffer
 			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 			bDesc.ByteWidth = sizeof(Lights);
 			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -201,6 +206,16 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			bDesc.Usage = D3D11_USAGE_DYNAMIC;
 
 			hr = myDevice->CreateBuffer(&bDesc, nullptr, &lightBuffer);
+
+			// Time constant buffer
+			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+			bDesc.ByteWidth = sizeof(XMFLOAT4);
+			bDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DYNAMIC;
+
+			hr = myDevice->CreateBuffer(&bDesc, nullptr, &timeBuffer);
+
 
 
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Spyro/HubTextures.dds", nullptr, &textureBox);
@@ -246,9 +261,12 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (iBuffer) iBuffer->Release();
 	if (vLayout) vLayout->Release();
 	if (vShader) vShader->Release();
+	if (sinVShader) sinVShader->Release();
 	if (pShader) pShader->Release();
+	if (bw_PShader) bw_PShader->Release();
 	if (cBuffer) cBuffer->Release();
 	if (lightBuffer) lightBuffer->Release();
+	if (timeBuffer) timeBuffer->Release();
 	if (samplerLin) samplerLin->Release();
 
 	// release shader resource
@@ -303,17 +321,23 @@ void LetsDrawSomeStuff::Render()
 			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			//Vertex Shader Stage
-			myContext->VSSetShader(vShader, 0, 0);
+			static bool vsSin = false;
+			if (!vsSin)
+				myContext->VSSetShader(vShader, 0, 0);
+			else
+				myContext->VSSetShader(sinVShader, 0, 0);
 			//Pixel Shader Stage
 			//toggle pixel shader
 			static bool psColor = true;
 			if (psColor)
 				myContext->PSSetShader(pShader, 0, 0);
 			else
-				myContext->PSSetShader(bwPsShader, 0, 0);
+				myContext->PSSetShader(bw_PShader, 0, 0);
 
-			if (GetAsyncKeyState('4') & 1)
+			if (GetAsyncKeyState('4') & 0x1)
 				psColor = !psColor;
+			if (GetAsyncKeyState('5') & 0x1)
+				vsSin = !vsSin;
 
 			// Draw
 			myContext->DrawIndexed(numIndices, 0, 0);
@@ -390,12 +414,6 @@ void LetsDrawSomeStuff::Render()
 			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
 
-			// Attach matrices to cBuffer
-			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
-			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
-			myContext->Unmap(cBuffer, 0);
 
 			//-----------------------------------------------------------------------
 			// Directional Light
@@ -410,7 +428,7 @@ void LetsDrawSomeStuff::Render()
 			else
 				myLights.dLight[2] = { 0,0,0,0 };
 
-			if (GetAsyncKeyState('1') & 1)
+			if (GetAsyncKeyState('1') & 0x1)
 				dToggle = !dToggle;
 
 			XMVECTOR temp2 = { myLights.dLight[1].x, myLights.dLight[1].y, myLights.dLight[1].z, myLights.dLight[1].w, };
@@ -434,7 +452,7 @@ void LetsDrawSomeStuff::Render()
 			else
 				myLights.pLight[2] = { 0,0,0,0 };
 
-			if (GetAsyncKeyState('2') & 1)
+			if (GetAsyncKeyState('2') & 0x1)
 				pToggle = !pToggle;
 		
 			// point light radius
@@ -461,7 +479,7 @@ void LetsDrawSomeStuff::Render()
 			XMStoreFloat4(&myLights.pLight[0], temp2);
 
 			//-----------------------------------------------------------------------
-			// Spot Light
+			// Spotlight
 			//-----------------------------------------------------------------------
 			XMFLOAT4 sColor = { 0.5f, 0.5f, 0, 1 };
 			static bool sToggle = true;
@@ -475,7 +493,7 @@ void LetsDrawSomeStuff::Render()
 			else
 				myLights.sLight[2] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-			if (GetAsyncKeyState('3') & 1)
+			if (GetAsyncKeyState('3') & 0x1)
 				sToggle = !sToggle;
 
 			// innerConeRatio, outerConeRatio, minDistance, maxDistance
@@ -517,8 +535,20 @@ void LetsDrawSomeStuff::Render()
 			myLights.specular[0].y = 4.0f;
 
 			//-----------------------------------------------------------------------
+			// Time buffer
+			//-----------------------------------------------------------------------
+			XMFLOAT4 time = { (float)timer.TotalTime(), 0, 0, 0 };
+
+			//-----------------------------------------------------------------------
 			// Constant Buffer connection
 			//-----------------------------------------------------------------------
+
+			// Attach matrices to cBuffer
+			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
 
 			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -526,12 +556,16 @@ void LetsDrawSomeStuff::Render()
 
 			myContext->Unmap(lightBuffer, 0);
 
-			//connect constant buffers to pipeline
-			ID3D11Buffer * vConstants[] = { cBuffer };
-			myContext->VSSetConstantBuffers(0, 1, vConstants);
+			// Attach time to timeBuffer
+			myContext->Map(timeBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((XMFLOAT4*)(gpuBuffer.pData)) = time;
 
-			ID3D11Buffer * pConstants[] = { lightBuffer };
-			myContext->PSSetConstantBuffers(0, 1, pConstants);
+			//connect constant buffers to pipeline
+			ID3D11Buffer * vConstants[] = { cBuffer, timeBuffer };
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+			ID3D11Buffer * pConstants[] = { lightBuffer, timeBuffer };
+			myContext->PSSetConstantBuffers(0, 2, pConstants);
 
 			//dds
 			myContext->PSSetShaderResources(0, 1, &textureBox);

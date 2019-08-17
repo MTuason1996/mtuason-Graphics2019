@@ -6,19 +6,19 @@
 
 struct InputVertex
 {
-    float4 pos : POSITION;
-    float2 uv : TEXTURE;
-    float4 normal : NORMAL;
+	float4 pos : POSITION;
+	float2 uv : TEXTURE;
+	float4 normal : NORMAL;
 	float4 color : COLOR;
 	float4 wPos : WPOSITION;
 };
 
 struct OutputVertex
 {
-    float4 pos : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    float4 normal : NORMAL0;
-    float4 color : COLOR0;
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD0;
+	float4 normal : NORMAL0;
+	float4 color : COLOR0;
 	float4 wPos : WPOSITION0;
 };
 
@@ -36,21 +36,24 @@ cbuffer timeVar : register(b1)
 
 OutputVertex main(InputVertex input)
 {
-    OutputVertex output = (OutputVertex) 0;
-    output.pos = input.pos;
+	OutputVertex output = (OutputVertex)0;
+	output.pos = input.pos;
 	output.uv = input.uv;
-    output.normal = input.normal;
-    output.color = input.color;
-    //Do math here
+	output.normal = input.normal;
+	output.color = input.color;
+	//Do math here
 
 	output.pos = mul(worldMatrix, output.pos);
-    output.normal = mul(worldMatrix, output.normal);	
+	output.normal = mul(worldMatrix, output.normal);
+
+	output.pos.y += cos(output.pos.x * 0.1 + time.x);
+
 	output.wPos = output.pos;
 
 
 
-    output.pos = mul(viewMatrix, output.pos);
-    output.pos = mul(projMatrix, output.pos);
+	output.pos = mul(viewMatrix, output.pos);
+	output.pos = mul(projMatrix, output.pos);
 
-    return output;
+	return output;
 }

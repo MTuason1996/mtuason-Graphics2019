@@ -15,6 +15,12 @@ cbuffer lightVars : register(b0)
 	float4 specular[2];
 };
 
+cbuffer timeVar : register(b1)
+{
+	float4 time;
+}
+
+
 
 Texture2D txDiffuse : register(t0);
 SamplerState samLinear : register(s0);
@@ -49,14 +55,13 @@ float4 main(OutputVertex inputPixel) : SV_Target
 	float sAtt = 1.0 - saturate((sLight[3].x - surfaceRatio) / (sLight[3].x - sLight[3].y));
 	sAtt *= sAtt;
 
-	float lightRSpot = (saturate(dot(sLightFacing, inputPixel.normal)) + 1.0f) * sAtt;
+	float lightRSpot = (saturate(dot(sLightFacing, inputPixel.normal)) + 0.75f) * sAtt;
 	float4 luminenceSpot = lerp(float4(0, 0, 0, 1), sLight[2], lightRSpot);
 
 	// specular Spot
 	float4 sLightHalfVec = normalize((-sLight[1]) + viewDir);
 	float sLightIntensity = saturate(pow(dot(inputPixel.normal, dLightHalfVec), specular[0].y));
 	luminenceSpot = saturate(luminenceSpot + (sLight[2] * specular[0].x * sLightIntensity));
-
 
 	inputPixel.color = saturate(luminenceDir + luminencePoint + luminenceSpot);
 
