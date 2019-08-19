@@ -252,7 +252,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
 
 			//-----------------------------------------------------------------------
-			// View Matrix + camera controls
+			// View Matrix
 			//-----------------------------------------------------------------------
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
@@ -425,6 +425,7 @@ void LetsDrawSomeStuff::Render()
 
 			//Grab cam position for specular
 			XMStoreFloat4(&myLights.specular[1], posVec);
+
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
@@ -435,12 +436,12 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_LSHIFT))
 			{
 				if (fov < 90.0f)
-					fov += 0.1f;
+					fov += 0.5f;
 			}
 			else if (GetAsyncKeyState(VK_CONTROL))
 			{
 				if (fov > 30.0f)
-					fov -= 0.1f;
+					fov -= 0.5f;
 			}
 			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
@@ -561,7 +562,7 @@ void LetsDrawSomeStuff::Render()
 			// Specular values
 			//-----------------------------------------------------------------------
 			//specular Intensity
-			myLights.specular[0].x = 0.25f;
+			myLights.specular[0].x = 0.75f;
 			// specular Power
 			myLights.specular[0].y = 4.0f;
 
