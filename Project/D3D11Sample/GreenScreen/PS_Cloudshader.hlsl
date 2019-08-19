@@ -1,9 +1,9 @@
 struct OutputVertex
 {
-    float4 pos : SV_POSITION;
-    float2 uv : TEXCOORD0;
-    float4 normal : NORMAL0;
-    float4 color : COLOR0;
+	float4 pos : SV_POSITION;
+	float2 uv : TEXCOORD0;
+	float4 normal : NORMAL0;
+	float4 color : COLOR0;
 	float4 wPos : WPOSITION0;
 };
 
@@ -27,12 +27,20 @@ SamplerState samLinear : register(s0);
 
 float4 main(OutputVertex inputPixel) : SV_Target
 {
+	float amp = 0.5f;
+	float freq = 0.5f;
+	float wave = amp * cos(freq * (inputPixel.wPos.x * 0.5f + time.x));
+
 	// Specular lighting
 	float4 viewDir = normalize(specular[1] - inputPixel.wPos);
 
 	//Directional light
 	float lightRDir = saturate(dot(dLight[1], inputPixel.normal) + 0.25f);
 	float4 luminenceDir = lerp(float4(0, 0, 0, 1), dLight[2], lightRDir);
+
+	//simulate clouds
+	if (length(dLight[2]) > 0)
+		luminenceDir = lerp(luminenceDir, float4(0,0,0, 1), wave);
 
 	// spec directional
 	float4 dLightHalfVec = normalize((-dLight[1]) + viewDir);

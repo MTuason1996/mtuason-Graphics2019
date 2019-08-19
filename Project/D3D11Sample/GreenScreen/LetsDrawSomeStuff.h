@@ -23,6 +23,7 @@
 #include "PixelShader.csh"
 #include "PS_BWshader.csh"
 #include "VS_sinShader.csh"
+#include "PS_Cloudshader.csh"
 
 using namespace DirectX;
 
@@ -53,10 +54,15 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11Buffer*				timeBuffer = nullptr;
 	ID3D11InputLayout*			vLayout = nullptr;
+
+	//Vertex Shaders
 	ID3D11VertexShader*			vShader = nullptr;
 	ID3D11VertexShader*			sinVShader = nullptr;
-	ID3D11PixelShader*			pShader = nullptr; //hlsl
+
+	//Pixel Shaders
+	ID3D11PixelShader*			pShader = nullptr;
 	ID3D11PixelShader*			bw_PShader = nullptr;
+	ID3D11PixelShader*			cloud_PShader = nullptr;
 
 	//Textures
 	ID3D11ShaderResourceView*	textureBox = nullptr;
@@ -82,7 +88,14 @@ class LetsDrawSomeStuff
 	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
 	XTime timer;
 
-
+	// Enum triggers
+	enum Pixel
+	{
+		norm = 0,
+		bw,
+		cloudy
+	};
+	int numPS = 3;
 
 	float aspectR = 1.0f;
 
@@ -177,6 +190,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			 hr = myDevice->CreateVertexShader(VS_sinShader, sizeof(VS_sinShader), nullptr, &sinVShader);
 			 hr = myDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr, &pShader);
 			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bw_PShader);
+			 hr = myDevice->CreatePixelShader(PS_Cloudshader, sizeof(PS_Cloudshader), nullptr, &cloud_PShader);
 
 			//describe to d3d11
 			 D3D11_INPUT_ELEMENT_DESC ieDesc[] = 
@@ -260,10 +274,13 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (vBuffer) vBuffer->Release();
 	if (iBuffer) iBuffer->Release();
 	if (vLayout) vLayout->Release();
+	//Vertex shaders
 	if (vShader) vShader->Release();
 	if (sinVShader) sinVShader->Release();
+	//Pixel shaders
 	if (pShader) pShader->Release();
 	if (bw_PShader) bw_PShader->Release();
+	if (cloud_PShader) cloud_PShader->Release();
 	if (cBuffer) cBuffer->Release();
 	if (lightBuffer) lightBuffer->Release();
 	if (timeBuffer) timeBuffer->Release();
@@ -328,14 +345,28 @@ void LetsDrawSomeStuff::Render()
 				myContext->VSSetShader(sinVShader, 0, 0);
 			//Pixel Shader Stage
 			//toggle pixel shader
-			static bool psColor = true;
-			if (psColor)
+			static int choosePS = 0;
+
+			switch (choosePS)
+			{
+			case norm:
 				myContext->PSSetShader(pShader, 0, 0);
-			else
+				break;
+			case bw:
 				myContext->PSSetShader(bw_PShader, 0, 0);
+				break;
+			case cloudy:
+				myContext->PSSetShader(cloud_PShader, 0, 0);
+				break;
+			}
 
 			if (GetAsyncKeyState('4') & 0x1)
-				psColor = !psColor;
+			{
+				if (choosePS < numPS - 1)
+					choosePS += 1;
+				else
+					choosePS = norm;
+			}
 			if (GetAsyncKeyState('5') & 0x1)
 				vsSin = !vsSin;
 
@@ -356,7 +387,7 @@ void LetsDrawSomeStuff::Render()
 			float zAxisT = 0;
 
 			//Translate
-			float tSpeed = 5 * timer.SmoothDelta();
+			float tSpeed = 5 * (float)timer.SmoothDelta();
 			if (GetAsyncKeyState('W'))
 				zAxisT += tSpeed;
 			if (GetAsyncKeyState('S'))
@@ -371,7 +402,7 @@ void LetsDrawSomeStuff::Render()
 				yAxisT += tSpeed;
 
 			//Rotate
-			float rSpeed = 120 * timer.SmoothDelta();
+			float rSpeed = 120 * (float)timer.SmoothDelta();
 			if (GetAsyncKeyState('K'))
 				xAxisR += rSpeed;
 			if (GetAsyncKeyState('I'))
@@ -530,7 +561,7 @@ void LetsDrawSomeStuff::Render()
 			// Specular values
 			//-----------------------------------------------------------------------
 			//specular Intensity
-			myLights.specular[0].x = 1.0f;
+			myLights.specular[0].x = 0.25f;
 			// specular Power
 			myLights.specular[0].y = 4.0f;
 
