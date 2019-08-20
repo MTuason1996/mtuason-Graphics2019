@@ -28,7 +28,7 @@ SamplerState samLinear : register(s0);
 float4 main(OutputVertex inputPixel) : SV_Target
 {
 	float amp = 0.5f;
-	float freq = 0.5f;
+	float freq = 0.75f;
 	float wave = amp * cos(freq * (inputPixel.wPos.x * 0.5f + time.x));
 
 	// Specular lighting

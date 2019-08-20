@@ -432,6 +432,7 @@ void LetsDrawSomeStuff::Render()
 			//-----------------------------------------------------------------------
 			// Projection Matrix
 			//-----------------------------------------------------------------------
+			//edit fov
 			static float fov = 90;
 			if (GetAsyncKeyState(VK_CONTROL) && GetAsyncKeyState(VK_LSHIFT))
 			{
@@ -443,7 +444,33 @@ void LetsDrawSomeStuff::Render()
 				if (fov > 30.0f)
 					fov -= 0.5f;
 			}
-			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, 0.1f, 1000.0f);
+
+			// edit near- and far-plane
+			static float nPlane = 0.1f;
+			static float fPlane = 10.0f;
+			if (GetAsyncKeyState(VK_RIGHT))
+			{
+				if (nPlane < fPlane - 0.1f)
+					nPlane += 0.1f;
+			}
+			if (GetAsyncKeyState(VK_LEFT))
+			{
+				if (nPlane > 0.1f)
+					nPlane -= 0.1f;
+				if (nPlane < 0.1f)
+					nPlane = 0.1f;
+			}
+			if (GetAsyncKeyState(VK_UP))
+			{
+				if (fPlane < 1000.0f)
+					fPlane += 0.1f;
+			}
+			if (GetAsyncKeyState(VK_DOWN))
+			{
+				if (fPlane > nPlane + 0.1f)
+					fPlane -= 0.1f;
+			}
+			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, nPlane, fPlane);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
 
 
