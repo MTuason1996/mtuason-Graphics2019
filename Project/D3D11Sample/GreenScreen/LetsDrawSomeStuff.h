@@ -447,7 +447,7 @@ void LetsDrawSomeStuff::Render()
 
 			// edit near- and far-plane
 			static float nPlane = 0.1f;
-			static float fPlane = 10.0f;
+			static float fPlane = 100.0f;
 			if (GetAsyncKeyState(VK_RIGHT))
 			{
 				if (nPlane < fPlane - 0.1f)
