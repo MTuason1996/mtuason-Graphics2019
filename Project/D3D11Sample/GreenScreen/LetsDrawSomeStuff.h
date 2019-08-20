@@ -131,7 +131,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			// TODO: Create new DirectX stuff here! (Buffers, Shaders, Layouts, Views, Textures, etc...)
 			timer.Restart();
-			mySurface->GetAspectRatio(aspectR);
 
 			//load onto card
 			D3D11_BUFFER_DESC bDesc = {};
@@ -470,6 +469,9 @@ void LetsDrawSomeStuff::Render()
 				if (fPlane > nPlane + 0.1f)
 					fPlane -= 0.1f;
 			}
+
+			// Get aspect ratio
+			mySurface->GetAspectRatio(aspectR);
 			temp = XMMatrixPerspectiveFovLH(XMConvertToRadians(fov), aspectR, nPlane, fPlane);
 			XMStoreFloat4x4(&myMatrices.pMatrix, temp);
 
