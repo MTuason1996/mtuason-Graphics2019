@@ -66,5 +66,11 @@
     <FxCompile Include="PS_Cloudshader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="PS_skyboxShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VS_skyboxShader.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

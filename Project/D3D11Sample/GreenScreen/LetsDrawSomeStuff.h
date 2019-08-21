@@ -24,6 +24,8 @@
 #include "PS_BWshader.csh"
 #include "VS_sinShader.csh"
 #include "PS_Cloudshader.csh"
+#include "PS_skyboxshader.csh"
+#include "VS_skyboxShader.csh"
 
 using namespace DirectX;
 
@@ -44,8 +46,6 @@ class LetsDrawSomeStuff
 		XMFLOAT4 pos;
 		XMFLOAT2 uv;
 		XMFLOAT4 normal;
-		XMFLOAT4 color;
-		XMFLOAT4 wPos;
 	};
 
 	ID3D11Buffer*				vBuffer = nullptr;
@@ -58,11 +58,18 @@ class LetsDrawSomeStuff
 	//Vertex Shaders
 	ID3D11VertexShader*			vShader = nullptr;
 	ID3D11VertexShader*			sinVShader = nullptr;
+	ID3D11VertexShader*			skybox_VShader = nullptr;
 
 	//Pixel Shaders
 	ID3D11PixelShader*			pShader = nullptr;
 	ID3D11PixelShader*			bw_PShader = nullptr;
 	ID3D11PixelShader*			cloud_PShader = nullptr;
+	ID3D11PixelShader*			skybox_PShader = nullptr;
+
+	// skyBox
+	ID3D11Buffer*				skyVBuffer = nullptr;
+	ID3D11Buffer*				skyIBuffer = nullptr;
+	ID3D11ShaderResourceView*	skyTexture = nullptr;
 
 	//Textures
 	ID3D11ShaderResourceView*	textureBox = nullptr;
@@ -74,6 +81,7 @@ class LetsDrawSomeStuff
 	XMFLOAT4X4 wMatrix;
 	XMFLOAT4X4 vMatrix;
 	XMFLOAT4X4 pMatrix;
+	XMFLOAT4X4 worldView;
 	}myMatrices;
 
 	// Lights
@@ -138,6 +146,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
+			//Loading data using obj2header header file
 			for (int i = 0; i < ARRAYSIZE(ArtisansHub_data); ++i)
 			{
 				artisansHub[i].pos.x = ArtisansHub_data[i].pos[0] * 0.1f;
@@ -152,11 +161,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 				artisansHub[i].normal.y = ArtisansHub_data[i].nrm[1];
 				artisansHub[i].normal.z = ArtisansHub_data[i].nrm[2];
 				artisansHub[i].normal.w = 0.0f;
-
-				artisansHub[i].color = { 0,0,0,1 };
-
 			}
-
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -184,12 +189,96 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
 			numIndices = ARRAYSIZE(ArtisansHub_indicies);
 
+			// SkyBox
+			float skySize = 1.0f;
+			Vertex skyBox[24] = 
+			{
+				//front
+				{ {-skySize,	skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				//back
+				{ {skySize,		skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				//right
+				{ {skySize,		skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				//left
+				{ {-skySize,	skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				// top
+				{ {-skySize,	skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				//bottom
+				{ {-skySize,	-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	-skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {-skySize,	-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} },
+				{ {skySize,		-skySize,	skySize,	1.0f}, {1.0f, 0.0f}, {0,0,0,0} }
+			};
+
+			//skybox vertex buffer
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * ARRAYSIZE(skyBox);
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = skyBox;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &skyVBuffer);
+
+			int skyBoxIndex[36] = 
+			{
+				2,0,1,
+				3,2,1,
+
+				6,4,7,
+				7,4,5,
+
+				8,9,10,
+				10,9,11,
+
+				12,13,14,
+				14,13,15,
+
+				19,17,16,
+				16,18,19,
+
+				20,22,23,
+				23,21,20
+			};
+
+			//skybox index buffer
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * ARRAYSIZE(skyBoxIndex);
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = skyBoxIndex;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &skyIBuffer);
+
 			//write, compile and load shaders
 			 hr = myDevice->CreateVertexShader(VertexShader, sizeof(VertexShader), nullptr, &vShader);
 			 hr = myDevice->CreateVertexShader(VS_sinShader, sizeof(VS_sinShader), nullptr, &sinVShader);
 			 hr = myDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr, &pShader);
 			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bw_PShader);
 			 hr = myDevice->CreatePixelShader(PS_Cloudshader, sizeof(PS_Cloudshader), nullptr, &cloud_PShader);
+			 
+			 //skybox
+			 hr = myDevice->CreateVertexShader(VS_skyboxShader, sizeof(VS_skyboxShader), nullptr, &skybox_VShader);
+			 hr = myDevice->CreatePixelShader(PS_skyboxShader, sizeof(PS_skyboxShader), nullptr, &skybox_PShader);
 
 			//describe to d3d11
 			 D3D11_INPUT_ELEMENT_DESC ieDesc[] = 
@@ -197,10 +286,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 				{"POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 				{"TEXTURE", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
 				{"NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
-				{"WPOSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
 			 };
-			hr = myDevice->CreateInputLayout(ieDesc, 5, VertexShader, sizeof(VertexShader), &vLayout);
+			hr = myDevice->CreateInputLayout(ieDesc, 3, VertexShader, sizeof(VertexShader), &vLayout);
 
 			//Matrix constant buffer
 			bDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -232,6 +319,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Spyro/HubTextures.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
 			D3D11_SAMPLER_DESC sampDesc = {};
@@ -273,6 +361,12 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (vBuffer) vBuffer->Release();
 	if (iBuffer) iBuffer->Release();
 	if (vLayout) vLayout->Release();
+	//skybox
+	if (skyVBuffer) skyVBuffer->Release();
+	if (skyIBuffer) skyIBuffer->Release();
+	if (skyTexture) skyTexture->Release();
+	if (skybox_VShader) skybox_VShader->Release();
+	if (skybox_PShader) skybox_PShader->Release();
 	//Vertex shaders
 	if (vShader) vShader->Release();
 	if (sinVShader) sinVShader->Release();
@@ -329,12 +423,26 @@ void LetsDrawSomeStuff::Render()
 			//Input Assembler
 			myContext->IASetInputLayout(vLayout);
 
-			UINT strides[] = { sizeof(Vertex) };
-			UINT offsets[] = { 0 };
+			UINT strides[] = { sizeof(Vertex), sizeof(Vertex) };
+			UINT offsets[] = { 0, 0 };
+
+			// skyBox
+			myContext->IASetVertexBuffers(0, 1, &skyVBuffer, strides, offsets);
+
+			myContext->IASetIndexBuffer(skyIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			myContext->VSSetShader(skybox_VShader, 0, 0);
+			myContext->PSSetShader(skybox_PShader, 0, 0);
+
+
+			myContext->DrawIndexed(36, 0, 0);
+
+			myContext->ClearDepthStencilView(myDepthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
+
 			ID3D11Buffer* tempVB[] = { vBuffer };
 			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
 			myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R32_UINT, 0);
-			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			//Vertex Shader Stage
 			static bool vsSin = false;
@@ -425,6 +533,9 @@ void LetsDrawSomeStuff::Render()
 			//Grab cam position for specular
 			XMStoreFloat4(&myLights.specular[1], posVec);
 
+			XMMATRIX worldViewTemp = XMMatrixTranslation(XMVectorGetX(temp.r[3]), XMVectorGetY(temp.r[3]), XMVectorGetZ(temp.r[3]));
+			XMStoreFloat4x4(&myMatrices.worldView, worldViewTemp);
+
 			temp = XMMatrixInverse(nullptr, temp);
 			XMStoreFloat4x4(&myMatrices.vMatrix, temp);
 
@@ -446,7 +557,7 @@ void LetsDrawSomeStuff::Render()
 
 			// edit near- and far-plane
 			static float nPlane = 0.1f;
-			static float fPlane = 100.0f;
+			static float fPlane = 500.0f;
 			if (GetAsyncKeyState(VK_RIGHT))
 			{
 				if (nPlane < fPlane - 0.1f)
@@ -632,7 +743,8 @@ void LetsDrawSomeStuff::Render()
 			myContext->PSSetConstantBuffers(0, 2, pConstants);
 
 			//dds
-			myContext->PSSetShaderResources(0, 1, &textureBox);
+			ID3D11ShaderResourceView* textures[] = { textureBox, skyTexture };
+			myContext->PSSetShaderResources(0, 2, textures);
 			myContext->PSSetSamplers(0, 1, &samplerLin);
 
 			// Present Backbuffer using Swapchain object

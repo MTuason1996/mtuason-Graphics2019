@@ -3,7 +3,6 @@ struct OutputVertex
 	float4 pos : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	float4 normal : NORMAL0;
-	float4 color : COLOR0;
 	float4 wPos : WPOSITION0;
 };
 
@@ -71,7 +70,7 @@ float4 main(OutputVertex inputPixel) : SV_Target
 	float sLightIntensity = saturate(pow(dot(inputPixel.normal, dLightHalfVec), specular[0].y));
 	luminenceSpot = saturate(luminenceSpot + (sLight[2] * specular[0].x * sLightIntensity));
 
-	inputPixel.color = saturate(luminenceDir + luminencePoint + luminenceSpot);
+	float4 result = saturate(luminenceDir + luminencePoint + luminenceSpot);
 
-	return txDiffuse.Sample(samLinear, inputPixel.uv) * inputPixel.color;
+	return txDiffuse.Sample(samLinear, inputPixel.uv) * result;
 }
