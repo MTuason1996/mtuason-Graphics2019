@@ -18,7 +18,6 @@
 #include "DDSTextureLoader.h"
 
 // models and textures
-#include "Assets/Spyro/ArtisansHub.h"
 
 #include "VertexShader.csh"
 #include "PixelShader.csh"
@@ -48,8 +47,10 @@ class LetsDrawSomeStuff
 		XMFLOAT4 normal;
 	};
 
-	ID3D11Buffer*				vBuffer = nullptr;
-	ID3D11Buffer*				iBuffer = nullptr;
+	ID3D11Buffer*				worldVBuffer = nullptr;
+	ID3D11Buffer*				worldIBuffer = nullptr;
+	ID3D11Buffer*				dragonVBuffer = nullptr;
+	ID3D11Buffer*				dragonIBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
 	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11Buffer*				timeBuffer = nullptr;
@@ -105,7 +106,6 @@ class LetsDrawSomeStuff
 	int numModels = 1;
 	Model* models = new Model[numModels];
 
-	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
 	XTime timer;
 
 	// Enum triggers
@@ -249,6 +249,9 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateM
 		{
 			FbxNode* pFbxChildNode = pFbxRootNode->GetChild(i);
 
+			if (pFbxChildNode->GetNodeAttribute() == nullptr)
+				continue;
+
 			FbxNodeAttribute::EType AttributeType = pFbxChildNode->GetNodeAttribute()->GetAttributeType();
 
 			if (AttributeType != FbxNodeAttribute::eMesh)
@@ -351,24 +354,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&subData, sizeof(subData));
 
 			//Loading data using FBXLoader
-			hr = LoadFBX("Assets/Test/TEST2.fbx", &models[0], true);
-
-			//Loading data using obj2header header file
-			//for (int i = 0; i < ARRAYSIZE(ArtisansHub_data); ++i)
-			//{
-			//	artisansHub[i].pos.x = ArtisansHub_data[i].pos[0] * 0.1f;
-			//	artisansHub[i].pos.y = ArtisansHub_data[i].pos[1] * 0.1f;
-			//	artisansHub[i].pos.z = ArtisansHub_data[i].pos[2] * 0.1f;
-			//	artisansHub[i].pos.w = 1.0f;
-
-			//	artisansHub[i].uv.x = ArtisansHub_data[i].uvw[0];
-			//	artisansHub[i].uv.y = ArtisansHub_data[i].uvw[1];
-
-			//	artisansHub[i].normal.x = ArtisansHub_data[i].nrm[0];
-			//	artisansHub[i].normal.y = ArtisansHub_data[i].nrm[1];
-			//	artisansHub[i].normal.z = ArtisansHub_data[i].nrm[2];
-			//	artisansHub[i].normal.w = 0.0f;
-			//}
+			hr = LoadFBX("Assets/Fantasy/Book.fbx", &models[0], true);
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -380,7 +366,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			subData.pSysMem = &((*models[0].verts)[0]);
 
-			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &worldVBuffer);
 
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
@@ -391,7 +377,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			subData.pSysMem = models[0].indices;
 
-			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &worldIBuffer);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -522,7 +508,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Test/texture.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/bookTex.dds", nullptr, &textureBox);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
@@ -562,8 +548,11 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	myContext->Release();
 
 	// TODO: "Release()" more stuff here!
-	if (vBuffer) vBuffer->Release();
-	if (iBuffer) iBuffer->Release();
+	if (worldVBuffer) worldVBuffer->Release();
+	if (worldIBuffer) worldIBuffer->Release();
+	if (dragonVBuffer) dragonVBuffer->Release();
+	if (dragonIBuffer) dragonIBuffer->Release();
+
 	if (vLayout) vLayout->Release();
 	//skybox
 	if (skyVBuffer) skyVBuffer->Release();
@@ -630,66 +619,6 @@ void LetsDrawSomeStuff::Render()
 			myContext->ClearRenderTargetView(myRenderTargetView, color);
 
 			// TODO: Set your shaders, Update & Set your constant buffers, Attach your vertex & index buffers, Set your InputLayout & Topology & Draw!
-			//Input Assembler
-			myContext->IASetInputLayout(vLayout);
-
-			UINT strides[] = { sizeof(Vertex), sizeof(Vertex) };
-			UINT offsets[] = { 0, 0 };
-
-			// skyBox
-			myContext->IASetVertexBuffers(0, 1, &skyVBuffer, strides, offsets);
-
-			myContext->IASetIndexBuffer(skyIBuffer, DXGI_FORMAT_R32_UINT, 0);
-			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-			myContext->VSSetShader(skybox_VShader, 0, 0);
-			myContext->PSSetShader(skybox_PShader, 0, 0);
-
-
-			myContext->DrawIndexed(36, 0, 0);
-
-			myContext->ClearDepthStencilView(myDepthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
-
-			ID3D11Buffer* tempVB[] = { vBuffer };
-			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
-			myContext->IASetIndexBuffer(iBuffer, DXGI_FORMAT_R32_UINT, 0);
-
-			//Vertex Shader Stage
-			static bool vsSin = false;
-			if (!vsSin)
-				myContext->VSSetShader(vShader, 0, 0);
-			else
-				myContext->VSSetShader(sinVShader, 0, 0);
-			//Pixel Shader Stage
-			//toggle pixel shader
-			static int choosePS = 0;
-
-			switch (choosePS)
-			{
-			case norm:
-				myContext->PSSetShader(pShader, 0, 0);
-				break;
-			case bw:
-				myContext->PSSetShader(bw_PShader, 0, 0);
-				break;
-			case cloudy:
-				myContext->PSSetShader(cloud_PShader, 0, 0);
-				break;
-			}
-
-			if (GetAsyncKeyState('4') & 0x1)
-			{
-				if (choosePS < numPS - 1)
-					choosePS += 1;
-				else
-					choosePS = norm;
-			}
-			if (GetAsyncKeyState('5') & 0x1)
-				vsSin = !vsSin;
-
-			// Draw
-			myContext->DrawIndexed(models[0].numIndices, 0, 0);
-
 			//-----------------------------------------------------------------------
 			// Camera Controls
 			//-----------------------------------------------------------------------
@@ -953,10 +882,72 @@ void LetsDrawSomeStuff::Render()
 			myContext->PSSetConstantBuffers(0, 2, pConstants);
 
 			//dds
-			ID3D11ShaderResourceView* textures[] = { textureBox, skyTexture };
-			myContext->PSSetShaderResources(0, 2, textures);
 			myContext->PSSetSamplers(0, 1, &samplerLin);
 
+			////////////////////////////////////////////
+			// Draw
+			////////////////////////////////////////////
+#if 1
+			//Input Assembler
+			myContext->IASetInputLayout(vLayout);
+
+			UINT strides[] = { sizeof(Vertex) };
+			UINT offsets[] = { 0 };
+
+			// skyBox
+			myContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			myContext->VSSetShader(skybox_VShader, 0, 0);
+			myContext->PSSetShader(skybox_PShader, 0, 0);
+
+			myContext->IASetVertexBuffers(0, 1, &skyVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(skyIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &skyTexture);
+			myContext->DrawIndexed(36, 0, 0);
+
+			myContext->ClearDepthStencilView(myDepthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
+
+			ID3D11Buffer* tempVB[] = { worldVBuffer };
+
+			//Vertex Shader Stage
+			static bool vsSin = false;
+			if (!vsSin)
+				myContext->VSSetShader(vShader, 0, 0);
+			else
+				myContext->VSSetShader(sinVShader, 0, 0);
+			//Pixel Shader Stage
+			//toggle pixel shader
+			static int choosePS = 0;
+
+			switch (choosePS)
+			{
+			case norm:
+				myContext->PSSetShader(pShader, 0, 0);
+				break;
+			case bw:
+				myContext->PSSetShader(bw_PShader, 0, 0);
+				break;
+			case cloudy:
+				myContext->PSSetShader(cloud_PShader, 0, 0);
+				break;
+			}
+
+			if (GetAsyncKeyState('4') & 0x1)
+			{
+				if (choosePS < numPS - 1)
+					choosePS += 1;
+				else
+					choosePS = norm;
+			}
+			if (GetAsyncKeyState('5') & 0x1)
+				vsSin = !vsSin;
+
+			// Draw
+			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
+			myContext->IASetIndexBuffer(worldIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &textureBox);
+			myContext->DrawIndexed(models[0].numIndices, 0, 0);
+#endif
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
 			mySwapChain->Present(1, 0); // set first argument to 1 to enable vertical refresh sync with display

@@ -6,7 +6,7 @@ struct OutputVertex
     float4 wPos : WPOSITION0;
 };
 
-TextureCube txDiffuse : register(t1);
+TextureCube txDiffuse : register(t0);
 SamplerState samLinear : register(s0);
 
 float4 main(OutputVertex inputPixel) : SV_Target
