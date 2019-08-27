@@ -51,6 +51,10 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				worldIBuffer = nullptr;
 	ID3D11Buffer*				dragonVBuffer = nullptr;
 	ID3D11Buffer*				dragonIBuffer = nullptr;
+	ID3D11Buffer*				wizardVBuffer = nullptr;
+	ID3D11Buffer*				wizardIBuffer = nullptr;
+	ID3D11Buffer*				dwarfVBuffer = nullptr;
+	ID3D11Buffer*				dwarfIBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
 	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11Buffer*				timeBuffer = nullptr;
@@ -75,18 +79,19 @@ class LetsDrawSomeStuff
 	//Textures
 	ID3D11ShaderResourceView*	worldTex = nullptr;
 	ID3D11ShaderResourceView*	dragonTex = nullptr;
+	ID3D11ShaderResourceView*	wizardTex = nullptr;
+	ID3D11ShaderResourceView*	dwarfTex = nullptr;
 	ID3D11SamplerState*			samplerLin = nullptr;
 
 	// Math
 	struct WVP
 	{
-	XMFLOAT4X4 wMatrix;
+	XMFLOAT4X4 wMatrix[6];
 	XMFLOAT4X4 vMatrix;
 	XMFLOAT4X4 pMatrix;
 	XMFLOAT4X4 worldView;
 	}myMatrices;
 
-	XMMATRIX worlds[2];
 
 	// Lights
 	struct Lights
@@ -106,8 +111,10 @@ class LetsDrawSomeStuff
 		
 	};
 
-	int numMesh = 2;
+	int numMesh = 4;
 	Mesh* meshes = new Mesh[numMesh];
+	XMMATRIX worlds[3];
+	XMMATRIX instancedWorlds[6];
 
 	XTime timer;
 
@@ -303,10 +310,12 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Mesh *outMesh, bool rotateMes
 				myVert.normal.y = pNorms.GetAt(j)[1];
 				myVert.normal.z = pNorms.GetAt(j)[2];
 
+				XMVECTOR normal = { myVert.normal.x, myVert.normal.y, myVert.normal.z, 0.0f };
+				normal = XMVector4Normalize(normal);
+
 				if (rotateMesh)
 				{
 					XMVECTOR position = { myVert.pos.x, myVert.pos.y, myVert.pos.z, myVert.pos.w };
-					XMVECTOR normal = { myVert.normal.x, myVert.normal.y, myVert.normal.z, 0.0f };
 					XMMATRIX rotate = XMMatrixRotationX(XMConvertToRadians(-90));
 
 					position = XMVector4Transform(position, rotate);
@@ -314,6 +323,8 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Mesh *outMesh, bool rotateMes
 					XMStoreFloat4(&myVert.pos, position);
 					XMStoreFloat4(&myVert.normal, normal);
 				}
+				XMStoreFloat4(&myVert.normal, normal);
+
 				myVert.uv = XMFLOAT2((float)pUVs[j].mData[0], 1.0f - (float)pUVs[j].mData[1]);
 
 				outMesh->verts->push_back(myVert);
@@ -407,6 +418,56 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			subData.pSysMem = meshes[1].indices;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dragonIBuffer);
+
+			hr = LoadFBX("Assets/Fantasy/Wizard.fbx", &meshes[2], true, 0.1f);
+
+			//VertexBuffer
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[2].numVertices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = &((*meshes[2].verts)[0]);
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &wizardVBuffer);
+
+			//IndexBuffer
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[2].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = meshes[2].indices;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &wizardIBuffer);
+
+			hr = LoadFBX("Assets/Fantasy/Dwarf.fbx", &meshes[3], false, 0.1f);
+
+			//VertexBuffer
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[3].numVertices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = &((*meshes[3].verts)[0]);
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfVBuffer);
+
+			//IndexBuffer
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[3].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = meshes[3].indices;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfIBuffer);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -539,6 +600,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/bookTex.dds", nullptr, &worldTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DragonTex.dds", nullptr, &dragonTex);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/WizardTex.dds", nullptr, &wizardTex);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DwarfTex.dds", nullptr, &dwarfTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
@@ -560,6 +623,17 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			worlds[1] = XMMatrixTranslation(12, -4.5f, -0.3f);
 			worlds[1] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(90)), worlds[1]);
 
+			worlds[2] = XMMatrixTranslation(17, -4.5f, -0.3f);
+			worlds[2] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), worlds[2]);
+
+			instancedWorlds[0] = XMMatrixTranslation(17.5, -4.5f, -1.0f);
+			instancedWorlds[0] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), instancedWorlds[0]);
+
+			instancedWorlds[1] = XMMatrixMultiply(instancedWorlds[0], XMMatrixTranslation(0.6f, 0, 0) );
+			instancedWorlds[2] = XMMatrixMultiply(instancedWorlds[1], XMMatrixTranslation(0.6f, 0, 0) );
+			instancedWorlds[3] = XMMatrixMultiply(instancedWorlds[0], XMMatrixTranslation(0, 0, 1.2f) );
+			instancedWorlds[4] = XMMatrixMultiply(instancedWorlds[3], XMMatrixTranslation(0.6f, 0, 0) );
+			instancedWorlds[5] = XMMatrixMultiply(instancedWorlds[4], XMMatrixTranslation(0.6f, 0, 0) );
 			//-----------------------------------------------------------------------
 			// View Matrix
 			//-----------------------------------------------------------------------
@@ -585,6 +659,10 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (worldIBuffer) worldIBuffer->Release();
 	if (dragonVBuffer) dragonVBuffer->Release();
 	if (dragonIBuffer) dragonIBuffer->Release();
+	if (wizardVBuffer) wizardVBuffer->Release();
+	if (wizardIBuffer) wizardIBuffer->Release();
+	if (dwarfVBuffer) dwarfVBuffer->Release();
+	if (dwarfIBuffer) dwarfIBuffer->Release();
 
 	if (vLayout) vLayout->Release();
 	//skybox
@@ -608,6 +686,8 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	// release shader resource
 	if (worldTex) worldTex->Release();
 	if (dragonTex) dragonTex->Release();
+	if (wizardTex) wizardTex->Release();
+	if (dwarfTex) dwarfTex->Release();
 
 	for (int i = 0; i < numMesh; ++i)
 	{
@@ -873,10 +953,6 @@ void LetsDrawSomeStuff::Render()
 			//-----------------------------------------------------------------------
 			// Specular values
 			//-----------------------------------------------------------------------
-			//specular Intensity
-			myLights.specular[0].x = 0.0f;
-			// specular Power
-			myLights.specular[0].y = 0.0f;
 
 			//-----------------------------------------------------------------------
 			// Time buffer
@@ -890,11 +966,6 @@ void LetsDrawSomeStuff::Render()
 			// Attach matrices to cBuffer
 			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
 
-			// Attach light to lightBuffer
-			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			*((Lights*)(gpuBuffer.pData)) = myLights;
-
-			myContext->Unmap(lightBuffer, 0);
 
 			// Attach time to timeBuffer
 			myContext->Map(timeBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -968,15 +1039,29 @@ void LetsDrawSomeStuff::Render()
 			}
 			if (GetAsyncKeyState('5') & 0x1)
 				vsSin = !vsSin;
-
+			///////////////////////////////////////
+			// Draw all  meshes
+			//////////////////////////////////////
 			//set world matrix
-			XMStoreFloat4x4(&myMatrices.wMatrix, worlds[0]);
+			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[0]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
 
 			myContext->Unmap(cBuffer, 0);
 
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+			//specular Intensity
+			myLights.specular[0].x = 0.0f;
+			// specular Power
+			myLights.specular[0].y = 32.0f;
+			// Attach light to lightBuffer
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
+
 
 			// Draw
 			myContext->IASetVertexBuffers(0, 1, &worldVBuffer, strides, offsets);
@@ -985,18 +1070,84 @@ void LetsDrawSomeStuff::Render()
 			myContext->DrawIndexed(meshes[0].numIndices, 0, 0);
 
 			// set world matrix
-			XMStoreFloat4x4(&myMatrices.wMatrix, worlds[1]);
+			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[1]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
 
 			myContext->Unmap(cBuffer, 0);
 
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+			//specular Intensity
+			myLights.specular[0].x = 1.0f;
+			// specular Power
+			myLights.specular[0].y = 64.0f;
+			// Attach light to lightBuffer
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
+
 			// Draw
 			myContext->IASetVertexBuffers(0, 1, &dragonVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(dragonIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &dragonTex);
 			myContext->DrawIndexed(meshes[1].numIndices, 0, 0);
+
+			// set world matrix
+			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[2]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+
+			//specular Intensity
+			myLights.specular[0].x = 0.0f;
+			// specular Power
+			myLights.specular[0].y = 0.0f;
+			// Attach light to lightBuffer
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
+
+			// Draw
+			myContext->IASetVertexBuffers(0, 1, &wizardVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(wizardIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &wizardTex);
+			myContext->DrawIndexed(meshes[2].numIndices, 0, 0);
+
+			// set world matrix
+			for (int i = 0; i < 6; ++i)
+				XMStoreFloat4x4(&myMatrices.wMatrix[i], instancedWorlds[i]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+			//specular Intensity
+			myLights.specular[0].x = 0.0f;
+			// specular Power
+			myLights.specular[0].y = 0.0f;
+			// Attach light to lightBuffer
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
+
+			// Draw
+			myContext->IASetVertexBuffers(0, 1, &dwarfVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(dwarfIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &dwarfTex);
+			myContext->DrawIndexedInstanced(meshes[3].numIndices, 6, 0, 0, 0);
 #endif
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.

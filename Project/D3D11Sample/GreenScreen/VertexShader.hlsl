@@ -21,7 +21,7 @@ struct OutputVertex
 
 cbuffer matrixVars : register(b0)
 {
-	float4x4 worldMatrix;
+	float4x4 worldMatrix[6];
 	float4x4 viewMatrix;
 	float4x4 projMatrix;
     float4x4 worldView;
@@ -32,7 +32,7 @@ cbuffer timeVar : register(b1)
 	float4 time;
 }
 
-OutputVertex main(InputVertex input)
+OutputVertex main(InputVertex input, uint instance : SV_InstanceID)
 {
     OutputVertex output = (OutputVertex) 0;
     output.pos = input.pos;
@@ -40,8 +40,8 @@ OutputVertex main(InputVertex input)
     output.normal = input.normal;
     //Do math here
 
-	output.pos = mul(worldMatrix, output.pos);
-    output.normal = mul(worldMatrix, output.normal);
+	output.pos = mul(worldMatrix[instance], output.pos);
+    output.normal = mul(worldMatrix[instance], output.normal);
 	output.wPos = output.pos;
 
 
