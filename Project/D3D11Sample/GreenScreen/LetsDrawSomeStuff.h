@@ -73,7 +73,8 @@ class LetsDrawSomeStuff
 	ID3D11ShaderResourceView*	skyTexture = nullptr;
 
 	//Textures
-	ID3D11ShaderResourceView*	textureBox = nullptr;
+	ID3D11ShaderResourceView*	worldTex = nullptr;
+	ID3D11ShaderResourceView*	dragonTex = nullptr;
 	ID3D11SamplerState*			samplerLin = nullptr;
 
 	// Math
@@ -85,6 +86,8 @@ class LetsDrawSomeStuff
 	XMFLOAT4X4 worldView;
 	}myMatrices;
 
+	XMMATRIX worlds[2];
+
 	// Lights
 	struct Lights
 	{
@@ -94,7 +97,7 @@ class LetsDrawSomeStuff
 		XMFLOAT4 specular[2];
 	}myLights;
 
-	struct Model
+	struct Mesh
 	{
 		std::vector<Vertex>* verts = new std::vector<Vertex>();
 		int numVertices = 0;
@@ -103,8 +106,8 @@ class LetsDrawSomeStuff
 		
 	};
 
-	int numModels = 1;
-	Model* models = new Model[numModels];
+	int numMesh = 2;
+	Mesh* meshes = new Mesh[numMesh];
 
 	XTime timer;
 
@@ -131,7 +134,7 @@ public:
 	// Shutdown
 	~LetsDrawSomeStuff();
 
-	HRESULT LoadFBX(char* filePath, Model *outModel, bool rotateModel);
+	HRESULT LoadFBX(char* filePath, Mesh *outMesh, bool rotateModel, float scale);
 
 	// Draw
 	void Render();
@@ -215,7 +218,7 @@ void LetsDrawSomeStuff::LoadUVInformation(FbxMesh* pMesh, std::vector<FbxVector2
 	}
 }
 
-HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateModel)
+HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Mesh *outMesh, bool rotateMesh, float scale)
 {
 	//init manager
 	if (fbxSdkManager == nullptr)
@@ -261,8 +264,8 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateM
 
 			int numVerts = pMesh->GetControlPointsCount();
 			int tempIndexCount = pMesh->GetPolygonVertexCount();
-			outModel->numIndices += tempIndexCount;
-			outModel->indices = pMesh->GetPolygonVertices();
+			outMesh->numIndices += tempIndexCount;
+			outMesh->indices = pMesh->GetPolygonVertices();
 
 			//Load position data
 			std::vector<Vertex> tempVerts;
@@ -271,9 +274,9 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateM
 			{
 				FbxVector4 pVertices = pMesh->GetControlPointAt(j);
 				Vertex myVert;
-				myVert.pos.x = (float)pVertices.mData[0];
-				myVert.pos.y = (float)pVertices.mData[1];
-				myVert.pos.z = (float)pVertices.mData[2];
+				myVert.pos.x = (float)pVertices.mData[0] * scale;
+				myVert.pos.y = (float)pVertices.mData[1] * scale;
+				myVert.pos.z = (float)pVertices.mData[2] * scale;
 				myVert.pos.w = 1.0f;
 
 				myVert.uv = { 0,0 };
@@ -289,18 +292,18 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateM
 			FbxArray<FbxVector4> pNorms;
 			pMesh->GetPolygonVertexNormals(pNorms);
 
-			Vertex * verts2 = new Vertex[outModel->numIndices];
+			Vertex * verts2 = new Vertex[outMesh->numIndices];
 
 			//load remaining data
 			for (int j = 0; j < tempIndexCount; ++j)
 			{
 				Vertex myVert;
-				myVert.pos = tempVerts[outModel->indices[j]].pos;
+				myVert.pos = tempVerts[outMesh->indices[j]].pos;
 				myVert.normal.x = pNorms.GetAt(j)[0];
 				myVert.normal.y = pNorms.GetAt(j)[1];
 				myVert.normal.z = pNorms.GetAt(j)[2];
 
-				if (rotateModel)
+				if (rotateMesh)
 				{
 					XMVECTOR position = { myVert.pos.x, myVert.pos.y, myVert.pos.z, myVert.pos.w };
 					XMVECTOR normal = { myVert.normal.x, myVert.normal.y, myVert.normal.z, 0.0f };
@@ -313,16 +316,16 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateM
 				}
 				myVert.uv = XMFLOAT2((float)pUVs[j].mData[0], 1.0f - (float)pUVs[j].mData[1]);
 
-				outModel->verts->push_back(myVert);
+				outMesh->verts->push_back(myVert);
 			}
 
-			outModel->numVertices = outModel->numIndices;
+			outMesh->numVertices = outMesh->numIndices;
 
-			delete outModel->indices;
-			outModel->indices = new int[outModel->numIndices];
-			for (int j = 0; j < outModel->numIndices; j++)
+			delete outMesh->indices;
+			outMesh->indices = new int[outMesh->numIndices];
+			for (int j = 0; j < outMesh->numIndices; j++)
 			{
-				outModel->indices[j] = j;
+				outMesh->indices[j] = j;
 			}
 		}
 	}
@@ -353,31 +356,57 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
-			//Loading data using FBXLoader
-			hr = LoadFBX("Assets/Fantasy/Book.fbx", &models[0], true);
+			//Loading world using FBX loader
+			hr = LoadFBX("Assets/Fantasy/Book.fbx", &meshes[0], true, 1.0f);
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(Vertex) * models[0].numVertices;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[0].numVertices;
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = &((*models[0].verts)[0]);
+			subData.pSysMem = &((*meshes[0].verts)[0]);
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &worldVBuffer);
 
 			//IndexBuffer
-			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(int) * models[0].numIndices;
-			 bDesc.CPUAccessFlags = 0;
-			 bDesc.StructureByteStride = 0;
-			 bDesc.Usage = D3D11_USAGE_DEFAULT;
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[0].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = models[0].indices;
+			subData.pSysMem = meshes[0].indices;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &worldIBuffer);
+
+			// Loading Dragon
+			hr = LoadFBX("Assets/Fantasy/Dragon.fbx", &meshes[1], true, 0.1f);
+
+			//VertexBuffer
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[1].numVertices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = &((*meshes[1].verts)[0]);
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &dragonVBuffer);
+
+			//IndexBuffer
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[1].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = meshes[1].indices;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &dragonIBuffer);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -508,7 +537,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/bookTex.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/bookTex.dds", nullptr, &worldTex);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DragonTex.dds", nullptr, &dragonTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
@@ -525,12 +555,15 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			//-----------------------------------------------------------------------
 			// World Matrix
 			//-----------------------------------------------------------------------
-			XMMATRIX temp = XMMatrixIdentity();
-			XMStoreFloat4x4(&myMatrices.wMatrix, temp);
+			worlds[0] = XMMatrixIdentity();
+
+			worlds[1] = XMMatrixTranslation(12, -4.5f, -0.3f);
+			worlds[1] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(90)), worlds[1]);
 
 			//-----------------------------------------------------------------------
 			// View Matrix
 			//-----------------------------------------------------------------------
+			XMMATRIX temp = XMMatrixIdentity();
 			temp = XMMatrixRotationX(XMConvertToRadians(25));
 			temp = XMMatrixMultiply(temp, XMMatrixTranslation(0, 10, -20));
 			temp = XMMatrixInverse(nullptr, temp);
@@ -573,16 +606,16 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (samplerLin) samplerLin->Release();
 
 	// release shader resource
-	if (textureBox) textureBox->Release();
+	if (worldTex) worldTex->Release();
+	if (dragonTex) dragonTex->Release();
 
-	for (int i = 0; i < numModels; ++i)
+	for (int i = 0; i < numMesh; ++i)
 	{
-		delete models[i].verts;
-		delete models[i].indices;
+		delete meshes[i].verts;
+		delete meshes[i].indices;
 	}
 
-	for (int i = 0; i < numModels; ++i)
-		delete models;
+	delete meshes;
 
 
 	if (mySurface) // Free Gateware Interface
@@ -856,10 +889,6 @@ void LetsDrawSomeStuff::Render()
 
 			// Attach matrices to cBuffer
 			D3D11_MAPPED_SUBRESOURCE gpuBuffer;
-			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
-			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
-			myContext->Unmap(cBuffer, 0);
 
 			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
@@ -907,8 +936,6 @@ void LetsDrawSomeStuff::Render()
 
 			myContext->ClearDepthStencilView(myDepthStencilView, D3D11_CLEAR_DEPTH, 1, 0);
 
-			ID3D11Buffer* tempVB[] = { worldVBuffer };
-
 			//Vertex Shader Stage
 			static bool vsSin = false;
 			if (!vsSin)
@@ -942,11 +969,34 @@ void LetsDrawSomeStuff::Render()
 			if (GetAsyncKeyState('5') & 0x1)
 				vsSin = !vsSin;
 
+			//set world matrix
+			XMStoreFloat4x4(&myMatrices.wMatrix, worlds[0]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
 			// Draw
-			myContext->IASetVertexBuffers(0, 1, tempVB, strides, offsets);
+			myContext->IASetVertexBuffers(0, 1, &worldVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(worldIBuffer, DXGI_FORMAT_R32_UINT, 0);
-			myContext->PSSetShaderResources(0, 1, &textureBox);
-			myContext->DrawIndexed(models[0].numIndices, 0, 0);
+			myContext->PSSetShaderResources(0, 1, &worldTex);
+			myContext->DrawIndexed(meshes[0].numIndices, 0, 0);
+
+			// set world matrix
+			XMStoreFloat4x4(&myMatrices.wMatrix, worlds[1]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+			// Draw
+			myContext->IASetVertexBuffers(0, 1, &dragonVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(dragonIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &dragonTex);
+			myContext->DrawIndexed(meshes[1].numIndices, 0, 0);
 #endif
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
