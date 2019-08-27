@@ -10,7 +10,8 @@
 
 // Include DirectX11 for interface access
 #include <d3d11.h>
-#include <DirectXMath.h>
+
+#include "FBXLoader.h"
 #include "XTime.h"
 
 // DDSTextureLoading
@@ -27,7 +28,6 @@
 #include "PS_skyboxshader.csh"
 #include "VS_skyboxShader.csh"
 
-using namespace DirectX;
 
 
 // Simple Container class to make life easier/cleaner
@@ -93,6 +93,18 @@ class LetsDrawSomeStuff
 		XMFLOAT4 specular[2];
 	}myLights;
 
+	struct Model
+	{
+		std::vector<Vertex>* verts = new std::vector<Vertex>();
+		int numVertices = 0;
+		int* indices = nullptr;
+		int numIndices = 0;
+		
+	};
+
+	int numModels = 1;
+	Model* models = new Model[numModels];
+
 	Vertex* artisansHub = new Vertex[ARRAYSIZE(ArtisansHub_data)];
 	XTime timer;
 
@@ -107,22 +119,214 @@ class LetsDrawSomeStuff
 
 	float aspectR = 1.0f;
 
-	Vertex * vertices;
-	int numVertices = 0;
-	int * indices = nullptr;
-	int numIndices = 0;
-	float scale = 5.0f;
-
 	HRESULT hr;
+
+	FbxManager* fbxSdkManager = nullptr;
+
+	void LoadUVInformation(FbxMesh* pMesh, std::vector<FbxVector2>& uvVerts);
 
 public:
 	// Init
 	LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint);
 	// Shutdown
 	~LetsDrawSomeStuff();
+
+	HRESULT LoadFBX(char* filePath, Model *outModel, bool rotateModel);
+
 	// Draw
 	void Render();
 };
+
+void LetsDrawSomeStuff::LoadUVInformation(FbxMesh* pMesh, std::vector<FbxVector2>& uvVerts)
+{
+	//get all UV set names
+	FbxStringList lUVSetNameList;
+	pMesh->GetUVSetNames(lUVSetNameList);
+
+	//iterating over all uv sets
+	for (int lUVSetIndex = 0; lUVSetIndex < lUVSetNameList.GetCount(); lUVSetIndex++)
+	{
+		//get lUVSetIndex-th uv set
+		const char* lUVSetName = lUVSetNameList.GetStringAt(lUVSetIndex);
+		const FbxGeometryElementUV* lUVElement = pMesh->GetElementUV(lUVSetName);
+
+		if (!lUVElement)
+			continue;
+
+		// only support mapping mode eByPolygonVertex and eByControlPoint
+		if (lUVElement->GetMappingMode() != FbxGeometryElement::eByPolygonVertex &&
+			lUVElement->GetMappingMode() != FbxGeometryElement::eByControlPoint)
+			return;
+
+		//index array, where holds the index referenced to the uv data
+		const bool lUseIndex = lUVElement->GetReferenceMode() != FbxGeometryElement::eDirect;
+		const int lIndexCount = (lUseIndex) ? lUVElement->GetIndexArray().GetCount() : 0;
+
+		//iterating through the data by polygon
+		const int lPolyCount = pMesh->GetPolygonCount();
+
+		if (lUVElement->GetMappingMode() == FbxGeometryElement::eByControlPoint)
+		{
+			for (int lPolyIndex = 0; lPolyIndex < lPolyCount; ++lPolyIndex)
+			{
+				// build the max index array that we need to pass into MakePoly
+				const int lPolySize = pMesh->GetPolygonSize(lPolyIndex);
+				for (int lVertIndex = 0; lVertIndex < lPolySize; ++lVertIndex)
+				{
+					FbxVector2 lUVValue;
+
+					//get the index of the current vertex in control points array
+					int lPolyVertIndex = pMesh->GetPolygonVertex(lPolyIndex, lVertIndex);
+
+					//the UV index depends on the reference mode
+					int lUVIndex = lUseIndex ? lUVElement->GetIndexArray().GetAt(lPolyVertIndex) : lPolyVertIndex;
+
+					lUVValue = lUVElement->GetDirectArray().GetAt(lUVIndex);
+
+					uvVerts.push_back(lUVValue);
+				}
+			}
+		}
+		else if (lUVElement->GetMappingMode() == FbxGeometryElement::eByPolygonVertex)
+		{
+			int lPolyIndexCounter = 0;
+			for (int lPolyIndex = 0; lPolyIndex < lPolyCount; ++lPolyIndex)
+			{
+				// build the max index array that we need to pass into MakePoly
+				const int lPolySize = pMesh->GetPolygonSize(lPolyIndex);
+				for (int lVertIndex = 0; lVertIndex < lPolySize; ++lVertIndex)
+				{
+					if (lPolyIndexCounter < lIndexCount)
+					{
+						FbxVector2 lUVValue;
+
+						//the UV index depends on the reference mode
+						int lUVIndex = lUseIndex ? lUVElement->GetIndexArray().GetAt(lPolyIndexCounter) : lPolyIndexCounter;
+
+						lUVValue = lUVElement->GetDirectArray().GetAt(lUVIndex);
+
+						uvVerts.push_back(lUVValue);
+
+						lPolyIndexCounter++;
+					}
+				}
+			}
+		}
+	}
+}
+
+HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Model *outModel, bool rotateModel)
+{
+	//init manager
+	if (fbxSdkManager == nullptr)
+	{
+		fbxSdkManager = FbxManager::Create();
+
+		//create settings for manager
+		FbxIOSettings* IOSettings = FbxIOSettings::Create(fbxSdkManager, IOSROOT);
+		fbxSdkManager->SetIOSettings(IOSettings);
+	}
+
+	FbxImporter* pImporter = FbxImporter::Create(fbxSdkManager, "");
+	FbxScene* pFbxScene = FbxScene::Create(fbxSdkManager, "");
+
+	bool success = pImporter->Initialize(filePath, -1, fbxSdkManager->GetIOSettings());
+
+	if (!success) return E_FAIL;
+
+	success = pImporter->Import(pFbxScene);
+	if (!success) return E_FAIL;
+
+	pImporter->Destroy();
+
+	FbxNode* pFbxRootNode = pFbxScene->GetRootNode();
+
+	int childCount = pFbxRootNode->GetChildCount();
+
+	if (pFbxRootNode)
+	{
+		for (int i = 0; i < childCount; ++i)
+		{
+			FbxNode* pFbxChildNode = pFbxRootNode->GetChild(i);
+
+			FbxNodeAttribute::EType AttributeType = pFbxChildNode->GetNodeAttribute()->GetAttributeType();
+
+			if (AttributeType != FbxNodeAttribute::eMesh)
+				continue;
+
+			FbxMesh* pMesh = (FbxMesh*)pFbxChildNode->GetNodeAttribute();
+
+			int numVerts = pMesh->GetControlPointsCount();
+			int tempIndexCount = pMesh->GetPolygonVertexCount();
+			outModel->numIndices += tempIndexCount;
+			outModel->indices = pMesh->GetPolygonVertices();
+
+			//Load position data
+			std::vector<Vertex> tempVerts;
+
+			for (int j = 0; j < numVerts; j++)
+			{
+				FbxVector4 pVertices = pMesh->GetControlPointAt(j);
+				Vertex myVert;
+				myVert.pos.x = (float)pVertices.mData[0];
+				myVert.pos.y = (float)pVertices.mData[1];
+				myVert.pos.z = (float)pVertices.mData[2];
+				myVert.pos.w = 1.0f;
+
+				myVert.uv = { 0,0 };
+
+				myVert.normal = { 0,0,0,0 };
+
+				tempVerts.push_back(myVert);
+			}
+
+
+			std::vector<FbxVector2> pUVs;
+			LoadUVInformation(pMesh, pUVs);
+			FbxArray<FbxVector4> pNorms;
+			pMesh->GetPolygonVertexNormals(pNorms);
+
+			Vertex * verts2 = new Vertex[outModel->numIndices];
+
+			//load remaining data
+			for (int j = 0; j < tempIndexCount; ++j)
+			{
+				Vertex myVert;
+				myVert.pos = tempVerts[outModel->indices[j]].pos;
+				myVert.normal.x = pNorms.GetAt(j)[0];
+				myVert.normal.y = pNorms.GetAt(j)[1];
+				myVert.normal.z = pNorms.GetAt(j)[2];
+
+				if (rotateModel)
+				{
+					XMVECTOR position = { myVert.pos.x, myVert.pos.y, myVert.pos.z, myVert.pos.w };
+					XMVECTOR normal = { myVert.normal.x, myVert.normal.y, myVert.normal.z, 0.0f };
+					XMMATRIX rotate = XMMatrixRotationX(XMConvertToRadians(-90));
+
+					position = XMVector4Transform(position, rotate);
+					normal = XMVector4Normalize(XMVector4Transform(normal, rotate));
+					XMStoreFloat4(&myVert.pos, position);
+					XMStoreFloat4(&myVert.normal, normal);
+				}
+				myVert.uv = XMFLOAT2((float)pUVs[j].mData[0], 1.0f - (float)pUVs[j].mData[1]);
+
+				outModel->verts->push_back(myVert);
+			}
+
+			outModel->numVertices = outModel->numIndices;
+
+			delete outModel->indices;
+			outModel->indices = new int[outModel->numIndices];
+			for (int j = 0; j < outModel->numIndices; j++)
+			{
+				outModel->indices[j] = j;
+			}
+		}
+	}
+
+	return S_OK;
+}
+
 
 // Init
 LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
@@ -146,48 +350,48 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
+			//Loading data using FBXLoader
+			hr = LoadFBX("Assets/Test/TEST2.fbx", &models[0], true);
+
 			//Loading data using obj2header header file
-			for (int i = 0; i < ARRAYSIZE(ArtisansHub_data); ++i)
-			{
-				artisansHub[i].pos.x = ArtisansHub_data[i].pos[0] * 0.1f;
-				artisansHub[i].pos.y = ArtisansHub_data[i].pos[1] * 0.1f;
-				artisansHub[i].pos.z = ArtisansHub_data[i].pos[2] * 0.1f;
-				artisansHub[i].pos.w = 1.0f;
+			//for (int i = 0; i < ARRAYSIZE(ArtisansHub_data); ++i)
+			//{
+			//	artisansHub[i].pos.x = ArtisansHub_data[i].pos[0] * 0.1f;
+			//	artisansHub[i].pos.y = ArtisansHub_data[i].pos[1] * 0.1f;
+			//	artisansHub[i].pos.z = ArtisansHub_data[i].pos[2] * 0.1f;
+			//	artisansHub[i].pos.w = 1.0f;
 
-				artisansHub[i].uv.x = ArtisansHub_data[i].uvw[0];
-				artisansHub[i].uv.y = ArtisansHub_data[i].uvw[1];
+			//	artisansHub[i].uv.x = ArtisansHub_data[i].uvw[0];
+			//	artisansHub[i].uv.y = ArtisansHub_data[i].uvw[1];
 
-				artisansHub[i].normal.x = ArtisansHub_data[i].nrm[0];
-				artisansHub[i].normal.y = ArtisansHub_data[i].nrm[1];
-				artisansHub[i].normal.z = ArtisansHub_data[i].nrm[2];
-				artisansHub[i].normal.w = 0.0f;
-			}
+			//	artisansHub[i].normal.x = ArtisansHub_data[i].nrm[0];
+			//	artisansHub[i].normal.y = ArtisansHub_data[i].nrm[1];
+			//	artisansHub[i].normal.z = ArtisansHub_data[i].nrm[2];
+			//	artisansHub[i].normal.w = 0.0f;
+			//}
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			bDesc.ByteWidth = sizeof(Vertex) * ARRAYSIZE(ArtisansHub_data);
+			bDesc.ByteWidth = sizeof(Vertex) * models[0].numVertices;
 			bDesc.CPUAccessFlags = 0;
 			bDesc.MiscFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = artisansHub;
+			subData.pSysMem = &((*models[0].verts)[0]);
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &vBuffer);
 
-			numVertices = ARRAYSIZE(ArtisansHub_data);
-
 			//IndexBuffer
 			 bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			 bDesc.ByteWidth = sizeof(ArtisansHub_indicies);
+			 bDesc.ByteWidth = sizeof(int) * models[0].numIndices;
 			 bDesc.CPUAccessFlags = 0;
 			 bDesc.StructureByteStride = 0;
 			 bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = ArtisansHub_indicies;
+			subData.pSysMem = models[0].indices;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &iBuffer);
-			numIndices = ARRAYSIZE(ArtisansHub_indicies);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -318,7 +522,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 
 
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Spyro/HubTextures.dds", nullptr, &textureBox);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/Test/texture.dds", nullptr, &textureBox);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
@@ -382,8 +586,14 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	// release shader resource
 	if (textureBox) textureBox->Release();
 
-	delete artisansHub;
+	for (int i = 0; i < numModels; ++i)
+	{
+		delete models[i].verts;
+		delete models[i].indices;
+	}
 
+	for (int i = 0; i < numModels; ++i)
+		delete models;
 
 
 	if (mySurface) // Free Gateware Interface
@@ -478,7 +688,7 @@ void LetsDrawSomeStuff::Render()
 				vsSin = !vsSin;
 
 			// Draw
-			myContext->DrawIndexed(numIndices, 0, 0);
+			myContext->DrawIndexed(models[0].numIndices, 0, 0);
 
 			//-----------------------------------------------------------------------
 			// Camera Controls
@@ -590,8 +800,8 @@ void LetsDrawSomeStuff::Render()
 			//-----------------------------------------------------------------------
 			// Directional Light
 			//-----------------------------------------------------------------------
-			XMFLOAT4 dColor = { 0.32f, 0.942f, 0.762f,1 };
-			static bool dToggle = false;
+			XMFLOAT4 dColor = { 1.0f, 1.0f, 0.95f, 1 };
+			static bool dToggle = true;
 			myLights.dLight[0] = { 0, 0, 0, 1.0f };
 			myLights.dLight[1] = { 0.577f, 0.577f, -0.577f, 0.0f };
 			//toggle dLight
@@ -654,7 +864,7 @@ void LetsDrawSomeStuff::Render()
 			// Spotlight
 			//-----------------------------------------------------------------------
 			XMFLOAT4 sColor = { 0.5f, 0.5f, 0, 1 };
-			static bool sToggle = true;
+			static bool sToggle = false;
 			// position
 			myLights.sLight[0] = { 1.0f, 2.0f, -4.0f, 1.0f };
 			// direction
@@ -702,9 +912,9 @@ void LetsDrawSomeStuff::Render()
 			// Specular values
 			//-----------------------------------------------------------------------
 			//specular Intensity
-			myLights.specular[0].x = 0.75f;
+			myLights.specular[0].x = 0.0f;
 			// specular Power
-			myLights.specular[0].y = 4.0f;
+			myLights.specular[0].y = 0.0f;
 
 			//-----------------------------------------------------------------------
 			// Time buffer
