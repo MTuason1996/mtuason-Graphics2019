@@ -117,7 +117,7 @@ class LetsDrawSomeStuff
 
 	int numMesh = 5;
 	Mesh* meshes = new Mesh[numMesh];
-	XMMATRIX worlds[3];
+	XMMATRIX worlds[4];
 	XMMATRIX instancedWorlds[6];
 
 	XTime timer;
@@ -522,7 +522,18 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfVBuffer);
 
-			hr = LoadFBX("Assets/Fantasy/Arthur.fbx", &meshes[4], false, 1.0f);
+			//IndexBuffer
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[3].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = meshes[3].indices;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfIBuffer);
+
+			hr = LoadFBX("Assets/Fantasy/statue.fbx", &meshes[4], false, 0.01f);
 
 			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
@@ -681,7 +692,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DragonTex.dds", nullptr, &dragonTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/WizardTex.dds", nullptr, &wizardTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DwarfTex.dds", nullptr, &dwarfTex);
-			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/EmeraldFog_skyBox.dds", nullptr, &skyTexture);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/greenmountains_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
 			D3D11_SAMPLER_DESC sampDesc = {};
@@ -1257,6 +1268,7 @@ void LetsDrawSomeStuff::Render()
 			myContext->IASetVertexBuffers(0, 1, &statueVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(statueIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &skyTexture);
+			myContext->PSSetShader(reflect_PShader, 0, 0);
 			myContext->DrawIndexed(meshes[4].numIndices, 0, 0);
 
 #endif
