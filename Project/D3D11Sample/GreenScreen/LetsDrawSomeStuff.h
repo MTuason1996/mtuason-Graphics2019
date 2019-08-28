@@ -58,6 +58,8 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				dwarfIBuffer = nullptr;
 	ID3D11Buffer*				statueVBuffer = nullptr;
 	ID3D11Buffer*				statueIBuffer = nullptr;
+	ID3D11Buffer*				gridVBuffer = nullptr;
+	ID3D11Buffer*				gridIBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
 	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11Buffer*				timeBuffer = nullptr;
@@ -115,9 +117,9 @@ class LetsDrawSomeStuff
 		
 	};
 
-	int numMesh = 5;
+	int numMesh = 6;
 	Mesh* meshes = new Mesh[numMesh];
-	XMMATRIX worlds[4];
+	XMMATRIX worlds[5];
 	XMMATRIX instancedWorlds[6];
 
 	XTime timer;
@@ -148,6 +150,8 @@ public:
 	HRESULT LoadFBX(char* filePath, Mesh *outMesh, bool rotateModel, float scale);
 
 	void Compactify(Mesh *outMesh);
+
+	HRESULT GenerateGrid(float width, float height, int vertsWidth, int vertsHeight, Mesh *outMesh);
 
 	// Draw
 	void Render();
@@ -409,6 +413,62 @@ void LetsDrawSomeStuff::Compactify(Mesh *outMesh)
 		outMesh->indices[i] = indicesList[i];
 }
 
+HRESULT LetsDrawSomeStuff::GenerateGrid(float width, float height, int vertsWidth, int vertsHeight, Mesh *outMesh)
+{
+	float widthDist = width / (float)vertsWidth;
+	float widthStart = -(width / 2.0f);
+	float texUDist = 1.0f / (float)vertsWidth;
+
+	float heightDist = height / (float)vertsHeight;
+	float heightStart = -(height / 2.0f);
+	float texVDist = 1.0f / (float)vertsHeight;
+
+	// create vertices
+	for (int i = 0; i < vertsHeight; ++i)
+	{
+		float zPos = heightStart + (heightDist * i);
+		float texV = i * texVDist;
+		for (int j = 0; j < vertsWidth; ++j)
+		{
+			float xPos = widthStart + (widthDist * j);
+			float texU = j * texUDist;
+
+			Vertex myVert;
+			myVert.pos = { xPos, 0.0f, zPos, 1.0f };
+			myVert.normal = { 0,1,0,0 };	//flat Plane
+			myVert.uv = { texU, texV };
+
+			outMesh->verts->push_back(myVert);
+		}
+	}
+	
+	std::vector<int> indexList;
+	// create indices
+	for (int i = 0; i < vertsHeight - 1; ++i)
+	{
+		for (int j = 0; j < vertsWidth - 1; ++j)
+		{
+			indexList.push_back(j + (vertsWidth * i) + 1 + vertsWidth);
+			indexList.push_back(j + (vertsWidth * i) + 1);
+			indexList.push_back(j + (vertsWidth * i));
+
+			indexList.push_back(j + (vertsWidth * i));
+			indexList.push_back(j + (vertsWidth * i) + vertsWidth);
+			indexList.push_back(j + (vertsWidth * i) + 1 + vertsWidth);
+		}
+	}
+
+	outMesh->numIndices = (int)indexList.size();
+	outMesh->numVertices = vertsWidth * vertsHeight;
+
+	outMesh->indices = new int[outMesh->numIndices];
+
+	for (int i = 0; i < outMesh->numIndices; ++i)
+		outMesh->indices[i] = indexList[i];
+
+	return S_OK;
+}
+
 // Init
 LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 {
@@ -431,7 +491,10 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			ZeroMemory(&bDesc, sizeof(bDesc));
 			ZeroMemory(&subData, sizeof(subData));
 
-			//Loading world using FBX loader
+			///////////////////////////////////////
+			// Loading with FBX loader
+			///////////////////////////////////////
+			// Book
 			hr = LoadFBX("Assets/Fantasy/Book.fbx", &meshes[0], true, 1.0f);
 
 			//VertexBuffer
@@ -457,10 +520,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &worldIBuffer);
 
-			// Loading Dragon
+			// Dragon
 			hr = LoadFBX("Assets/Fantasy/Dragon.fbx", &meshes[1], true, 0.1f);
 
-			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			bDesc.ByteWidth = sizeof(Vertex) * meshes[1].numVertices;
 			bDesc.CPUAccessFlags = 0;
@@ -472,7 +534,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dragonVBuffer);
 
-			//IndexBuffer
 			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			bDesc.ByteWidth = sizeof(int) * meshes[1].numIndices;
 			bDesc.CPUAccessFlags = 0;
@@ -483,9 +544,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dragonIBuffer);
 
+			// Wizard
 			hr = LoadFBX("Assets/Fantasy/Wizard.fbx", &meshes[2], true, 0.1f);
 
-			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			bDesc.ByteWidth = sizeof(Vertex) * meshes[2].numVertices;
 			bDesc.CPUAccessFlags = 0;
@@ -497,7 +558,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &wizardVBuffer);
 
-			//IndexBuffer
 			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			bDesc.ByteWidth = sizeof(int) * meshes[2].numIndices;
 			bDesc.CPUAccessFlags = 0;
@@ -508,9 +568,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &wizardIBuffer);
 
+			// Dwarf
 			hr = LoadFBX("Assets/Fantasy/Dwarf.fbx", &meshes[3], false, 0.1f);
 
-			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			bDesc.ByteWidth = sizeof(Vertex) * meshes[3].numVertices;
 			bDesc.CPUAccessFlags = 0;
@@ -522,7 +582,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfVBuffer);
 
-			//IndexBuffer
 			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			bDesc.ByteWidth = sizeof(int) * meshes[3].numIndices;
 			bDesc.CPUAccessFlags = 0;
@@ -533,9 +592,9 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfIBuffer);
 
+			// Statue
 			hr = LoadFBX("Assets/Fantasy/statue.fbx", &meshes[4], false, 0.01f);
 
-			//VertexBuffer
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			bDesc.ByteWidth = sizeof(Vertex) * meshes[4].numVertices;
 			bDesc.CPUAccessFlags = 0;
@@ -547,7 +606,6 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &statueVBuffer);
 
-			//IndexBuffer
 			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 			bDesc.ByteWidth = sizeof(int) * meshes[4].numIndices;
 			bDesc.CPUAccessFlags = 0;
@@ -557,6 +615,30 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			subData.pSysMem = meshes[4].indices;
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &statueIBuffer);
+
+			// Grid
+			hr = GenerateGrid(100.0f, 100.0f, 10, 10, &meshes[5]);
+
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[5].numVertices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = &((*meshes[5].verts)[0]);
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &gridVBuffer);
+
+			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			bDesc.ByteWidth = sizeof(int) * meshes[5].numIndices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = meshes[5].indices;
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &gridIBuffer);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -718,6 +800,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			worlds[3] = XMMatrixTranslation(0, -4.5f, 25.0f);
 
+			worlds[4] = XMMatrixTranslation(20.0f, -25.0f, 25.0f);
+
 			instancedWorlds[0] = XMMatrixTranslation(17.5, -4.5f, -1.0f);
 			instancedWorlds[0] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), instancedWorlds[0]);
 
@@ -757,6 +841,8 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (dwarfIBuffer) dwarfIBuffer->Release();
 	if (statueVBuffer) statueVBuffer->Release();
 	if (statueIBuffer) statueIBuffer->Release();
+	if (gridVBuffer) gridVBuffer->Release();
+	if (gridIBuffer) gridIBuffer->Release();
 
 	if (vLayout) vLayout->Release();
 	//skybox
@@ -1137,139 +1223,126 @@ void LetsDrawSomeStuff::Render()
 			///////////////////////////////////////
 			// Draw all  meshes
 			//////////////////////////////////////
-			//set world matrix
+			// Book/World
+			// set world matrix
 			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[0]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
 			myContext->Unmap(cBuffer, 0);
-
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
 
-			//specular Intensity
-			myLights.specular[0].x = 0.0f;
-			// specular Power
-			myLights.specular[0].y = 32.0f;
-			// Attach light to lightBuffer
+			// Set specular values
+			myLights.specular[0].x = 0.0f;	// Specular Intensity
+			myLights.specular[0].y = 0.0f; // Specular Power
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
-
 			myContext->Unmap(lightBuffer, 0);
-
-
 
 			// Draw
 			myContext->IASetVertexBuffers(0, 1, &worldVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(worldIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &worldTex);
+
 			myContext->DrawIndexed(meshes[0].numIndices, 0, 0);
 
-			// set world matrix
+			// Dragon
 			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[1]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
 			myContext->Unmap(cBuffer, 0);
-
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
 
-			//specular Intensity
 			myLights.specular[0].x = 1.0f;
-			// specular Power
 			myLights.specular[0].y = 64.0f;
-			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
-
 			myContext->Unmap(lightBuffer, 0);
 
-
-			// Draw
 			myContext->IASetVertexBuffers(0, 1, &dragonVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(dragonIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &dragonTex);
+
 			myContext->DrawIndexed(meshes[1].numIndices, 0, 0);
 
-			// set world matrix
+			// Wizard
 			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[2]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
 			myContext->Unmap(cBuffer, 0);
-
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
 
-
-			//specular Intensity
 			myLights.specular[0].x = 0.0f;
-			// specular Power
 			myLights.specular[0].y = 0.0f;
-			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
-
 			myContext->Unmap(lightBuffer, 0);
 
-
-			// Draw
 			myContext->IASetVertexBuffers(0, 1, &wizardVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(wizardIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &wizardTex);
+
 			myContext->DrawIndexed(meshes[2].numIndices, 0, 0);
 
-			// set world matrix
+			// Dwarf
 			for (int i = 0; i < 6; ++i)
 				XMStoreFloat4x4(&myMatrices.wMatrix[i], instancedWorlds[i]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
 			myContext->Unmap(cBuffer, 0);
-
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
 
-			//specular Intensity
 			myLights.specular[0].x = 0.0f;
-			// specular Power
 			myLights.specular[0].y = 0.0f;
-			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
-
 			myContext->Unmap(lightBuffer, 0);
 
-
-			// Draw
 			myContext->IASetVertexBuffers(0, 1, &dwarfVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(dwarfIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &dwarfTex);
+
 			myContext->DrawIndexedInstanced(meshes[3].numIndices, 6, 0, 0, 0);
 
-			// set world matrix
+			// Grid
+			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[4]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+			myContext->Unmap(cBuffer, 0);
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+			myLights.specular[0].x = 0.0f;
+			myLights.specular[0].y = 0.0f;
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+			myContext->Unmap(lightBuffer, 0);
+
+			myContext->IASetVertexBuffers(0, 1, &gridVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(gridIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &wizardTex);
+
+			myContext->DrawIndexed(meshes[5].numIndices, 0, 0);
+
+			// Statue
 			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[3]);
 			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((WVP*)(gpuBuffer.pData)) = myMatrices;
-
 			myContext->Unmap(cBuffer, 0);
-
 			myContext->VSSetConstantBuffers(0, 2, vConstants);
 
-
-			//specular Intensity
 			myLights.specular[0].x = 3.0f;
-			// specular Power
 			myLights.specular[0].y = 64.0f;
-			// Attach light to lightBuffer
 			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
 			*((Lights*)(gpuBuffer.pData)) = myLights;
-
 			myContext->Unmap(lightBuffer, 0);
 
-			// Draw
 			myContext->IASetVertexBuffers(0, 1, &statueVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(statueIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &skyTexture);
 			myContext->PSSetShader(reflect_PShader, 0, 0);
+
 			myContext->DrawIndexed(meshes[4].numIndices, 0, 0);
+
+
 
 #endif
 			// Present Backbuffer using Swapchain object
