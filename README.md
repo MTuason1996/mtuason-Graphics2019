@@ -19,5 +19,6 @@ Where to Find (MileStone III):
 Specular - best seen on dragon at castle gate
 Reflection w/ cube mapping - seen on knight model found in field with deer
 DrawIndexedInstanced - found with 6 dwarves in front of castle gate
+Grid mesh is found below the world (below the book)
 
 THEME: Fantasy

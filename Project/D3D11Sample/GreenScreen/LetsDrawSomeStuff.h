@@ -87,6 +87,7 @@ class LetsDrawSomeStuff
 	ID3D11ShaderResourceView*	dragonTex = nullptr;
 	ID3D11ShaderResourceView*	wizardTex = nullptr;
 	ID3D11ShaderResourceView*	dwarfTex = nullptr;
+	ID3D11ShaderResourceView*	saberTex = nullptr;
 	ID3D11SamplerState*			samplerLin = nullptr;
 
 	// Math
@@ -420,13 +421,13 @@ HRESULT LetsDrawSomeStuff::GenerateGrid(float width, float height, int vertsWidt
 	float texUDist = 1.0f / (float)vertsWidth;
 
 	float heightDist = height / (float)vertsHeight;
-	float heightStart = -(height / 2.0f);
+	float heightStart = (height / 2.0f);
 	float texVDist = 1.0f / (float)vertsHeight;
 
 	// create vertices
 	for (int i = 0; i < vertsHeight; ++i)
 	{
-		float zPos = heightStart + (heightDist * i);
+		float zPos = heightStart - (heightDist * i);
 		float texV = i * texVDist;
 		for (int j = 0; j < vertsWidth; ++j)
 		{
@@ -448,13 +449,13 @@ HRESULT LetsDrawSomeStuff::GenerateGrid(float width, float height, int vertsWidt
 	{
 		for (int j = 0; j < vertsWidth - 1; ++j)
 		{
-			indexList.push_back(j + (vertsWidth * i) + 1 + vertsWidth);
+			indexList.push_back(j + (vertsWidth * i));
 			indexList.push_back(j + (vertsWidth * i) + 1);
-			indexList.push_back(j + (vertsWidth * i));
-
-			indexList.push_back(j + (vertsWidth * i));
-			indexList.push_back(j + (vertsWidth * i) + vertsWidth);
 			indexList.push_back(j + (vertsWidth * i) + 1 + vertsWidth);
+
+			indexList.push_back(j + (vertsWidth * i) + 1 + vertsWidth);
+			indexList.push_back(j + (vertsWidth * i) + vertsWidth);
+			indexList.push_back(j + (vertsWidth * i));
 		}
 	}
 
@@ -617,7 +618,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &statueIBuffer);
 
 			// Grid
-			hr = GenerateGrid(100.0f, 100.0f, 10, 10, &meshes[5]);
+			hr = GenerateGrid(100.0f, 100.0f, 15, 15, &meshes[5]);
 
 			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 			bDesc.ByteWidth = sizeof(Vertex) * meshes[5].numVertices;
@@ -774,6 +775,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DragonTex.dds", nullptr, &dragonTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/WizardTex.dds", nullptr, &wizardTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/fantasy/DwarfTex.dds", nullptr, &dwarfTex);
+			hr = CreateDDSTextureFromFile(myDevice, L"Assets/misc/Saber.dds", nullptr, &saberTex);
 			hr = CreateDDSTextureFromFile(myDevice, L"Assets/SkyBox/greenmountains_skyBox.dds", nullptr, &skyTexture);
 
 			// Create sample state
@@ -800,7 +802,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			worlds[3] = XMMatrixTranslation(0, -4.5f, 25.0f);
 
-			worlds[4] = XMMatrixTranslation(20.0f, -25.0f, 25.0f);
+			worlds[4] = XMMatrixTranslation(20.0f, -50.0f, 20.0f);
 
 			instancedWorlds[0] = XMMatrixTranslation(17.5, -4.5f, -1.0f);
 			instancedWorlds[0] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), instancedWorlds[0]);
@@ -869,6 +871,7 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (dragonTex) dragonTex->Release();
 	if (wizardTex) wizardTex->Release();
 	if (dwarfTex) dwarfTex->Release();
+	if (saberTex) saberTex->Release();
 
 	for (int i = 0; i < numMesh; ++i)
 	{
@@ -1318,7 +1321,7 @@ void LetsDrawSomeStuff::Render()
 
 			myContext->IASetVertexBuffers(0, 1, &gridVBuffer, strides, offsets);
 			myContext->IASetIndexBuffer(gridIBuffer, DXGI_FORMAT_R32_UINT, 0);
-			myContext->PSSetShaderResources(0, 1, &wizardTex);
+			myContext->PSSetShaderResources(0, 1, &saberTex);
 
 			myContext->DrawIndexed(meshes[5].numIndices, 0, 0);
 
