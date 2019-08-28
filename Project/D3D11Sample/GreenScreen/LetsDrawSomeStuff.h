@@ -26,6 +26,7 @@
 #include "PS_Cloudshader.csh"
 #include "PS_skyboxshader.csh"
 #include "VS_skyboxShader.csh"
+#include "PS_ReflectionShader.csh"
 
 
 
@@ -55,6 +56,8 @@ class LetsDrawSomeStuff
 	ID3D11Buffer*				wizardIBuffer = nullptr;
 	ID3D11Buffer*				dwarfVBuffer = nullptr;
 	ID3D11Buffer*				dwarfIBuffer = nullptr;
+	ID3D11Buffer*				statueVBuffer = nullptr;
+	ID3D11Buffer*				statueIBuffer = nullptr;
 	ID3D11Buffer*				cBuffer = nullptr;
 	ID3D11Buffer*				lightBuffer = nullptr;
 	ID3D11Buffer*				timeBuffer = nullptr;
@@ -70,6 +73,7 @@ class LetsDrawSomeStuff
 	ID3D11PixelShader*			bw_PShader = nullptr;
 	ID3D11PixelShader*			cloud_PShader = nullptr;
 	ID3D11PixelShader*			skybox_PShader = nullptr;
+	ID3D11PixelShader*			reflect_PShader = nullptr;
 
 	// skyBox
 	ID3D11Buffer*				skyVBuffer = nullptr;
@@ -111,7 +115,7 @@ class LetsDrawSomeStuff
 		
 	};
 
-	int numMesh = 4;
+	int numMesh = 5;
 	Mesh* meshes = new Mesh[numMesh];
 	XMMATRIX worlds[3];
 	XMMATRIX instancedWorlds[6];
@@ -142,6 +146,8 @@ public:
 	~LetsDrawSomeStuff();
 
 	HRESULT LoadFBX(char* filePath, Mesh *outMesh, bool rotateModel, float scale);
+
+	void Compactify(Mesh *outMesh);
 
 	// Draw
 	void Render();
@@ -340,10 +346,68 @@ HRESULT LetsDrawSomeStuff::LoadFBX(char* filePath, Mesh *outMesh, bool rotateMes
 			}
 		}
 	}
-
+	//Compactify(outMesh);
 	return S_OK;
 }
 
+void LetsDrawSomeStuff::Compactify(Mesh *outMesh)
+{
+	std::vector<Vertex>& vecRef = *outMesh->verts;
+	std::vector<int> indicesList;
+	std::vector<Vertex> vertexList;
+
+	vertexList.push_back(vecRef[0]);
+	vertexList.push_back(vecRef[1]);
+	vertexList.push_back(vecRef[2]);
+
+	indicesList.push_back(0);
+	indicesList.push_back(1);
+	indicesList.push_back(2);
+
+	int add = 2;
+
+	float epsilon = 0.0001f;
+
+	bool copy = false;
+
+	for (int i = add + 1; i < outMesh->numVertices; ++i)
+	{
+		copy = false;
+
+		for (unsigned int j = 0; j < vertexList.size(); j++)
+		{
+			if (fabs(vertexList[j].pos.x - vecRef[i].pos.x) < epsilon &&
+				fabs(vertexList[j].pos.y - vecRef[i].pos.y) < epsilon &&
+				fabs(vertexList[j].pos.z - vecRef[i].pos.z) < epsilon &&
+				fabs(vertexList[j].normal.x - vecRef[i].normal.x) < epsilon &&
+				fabs(vertexList[j].normal.y - vecRef[i].normal.y) < epsilon &&
+				fabs(vertexList[j].normal.z - vecRef[i].normal.z) < epsilon &&
+				fabs(vertexList[j].uv.x - vecRef[i].uv.x) < epsilon &&
+				fabs(vertexList[j].uv.y - vecRef[i].uv.y) < epsilon)
+			{
+				indicesList.push_back(j);
+				copy = true;
+				break;
+			}
+		}
+		if (!copy)
+		{
+			indicesList.push_back(++add);
+			vertexList.push_back(vecRef[i]);
+		}
+	}
+
+	outMesh->numIndices = indicesList.size();
+	outMesh->numVertices = vertexList.size();
+	delete outMesh->verts;
+	outMesh->verts = &vertexList;
+
+	delete outMesh->indices;
+	outMesh->indices = new int[outMesh->numIndices];
+
+	for (int i = 0; i < outMesh->numIndices; ++i)
+		outMesh->indices[i] = indicesList[i];
+}
 
 // Init
 LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
@@ -458,16 +522,30 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 
 			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfVBuffer);
 
+			hr = LoadFBX("Assets/Fantasy/Arthur.fbx", &meshes[4], false, 1.0f);
+
+			//VertexBuffer
+			bDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			bDesc.ByteWidth = sizeof(Vertex) * meshes[4].numVertices;
+			bDesc.CPUAccessFlags = 0;
+			bDesc.MiscFlags = 0;
+			bDesc.StructureByteStride = 0;
+			bDesc.Usage = D3D11_USAGE_DEFAULT;
+
+			subData.pSysMem = &((*meshes[4].verts)[0]);
+
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &statueVBuffer);
+
 			//IndexBuffer
 			bDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			bDesc.ByteWidth = sizeof(int) * meshes[3].numIndices;
+			bDesc.ByteWidth = sizeof(int) * meshes[4].numIndices;
 			bDesc.CPUAccessFlags = 0;
 			bDesc.StructureByteStride = 0;
 			bDesc.Usage = D3D11_USAGE_DEFAULT;
 
-			subData.pSysMem = meshes[3].indices;
+			subData.pSysMem = meshes[4].indices;
 
-			hr = myDevice->CreateBuffer(&bDesc, &subData, &dwarfIBuffer);
+			hr = myDevice->CreateBuffer(&bDesc, &subData, &statueIBuffer);
 
 			// SkyBox
 			float skySize = 1.0f;
@@ -555,6 +633,7 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			 hr = myDevice->CreatePixelShader(PixelShader, sizeof(PixelShader), nullptr, &pShader);
 			 hr = myDevice->CreatePixelShader(PS_BWshader, sizeof(PS_BWshader), nullptr, &bw_PShader);
 			 hr = myDevice->CreatePixelShader(PS_Cloudshader, sizeof(PS_Cloudshader), nullptr, &cloud_PShader);
+			 hr = myDevice->CreatePixelShader(PS_ReflectionShader, sizeof(PS_ReflectionShader), nullptr, &reflect_PShader);
 			 
 			 //skybox
 			 hr = myDevice->CreateVertexShader(VS_skyboxShader, sizeof(VS_skyboxShader), nullptr, &skybox_VShader);
@@ -626,6 +705,8 @@ LetsDrawSomeStuff::LetsDrawSomeStuff(GW::SYSTEM::GWindow* attatchPoint)
 			worlds[2] = XMMatrixTranslation(17, -4.5f, -0.3f);
 			worlds[2] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), worlds[2]);
 
+			worlds[3] = XMMatrixTranslation(0, -4.5f, 25.0f);
+
 			instancedWorlds[0] = XMMatrixTranslation(17.5, -4.5f, -1.0f);
 			instancedWorlds[0] = XMMatrixMultiply(XMMatrixRotationY(XMConvertToRadians(-90)), instancedWorlds[0]);
 
@@ -663,6 +744,8 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (wizardIBuffer) wizardIBuffer->Release();
 	if (dwarfVBuffer) dwarfVBuffer->Release();
 	if (dwarfIBuffer) dwarfIBuffer->Release();
+	if (statueVBuffer) statueVBuffer->Release();
+	if (statueIBuffer) statueIBuffer->Release();
 
 	if (vLayout) vLayout->Release();
 	//skybox
@@ -678,6 +761,7 @@ LetsDrawSomeStuff::~LetsDrawSomeStuff()
 	if (pShader) pShader->Release();
 	if (bw_PShader) bw_PShader->Release();
 	if (cloud_PShader) cloud_PShader->Release();
+	if (reflect_PShader) reflect_PShader->Release();
 	if (cBuffer) cBuffer->Release();
 	if (lightBuffer) lightBuffer->Release();
 	if (timeBuffer) timeBuffer->Release();
@@ -1148,6 +1232,33 @@ void LetsDrawSomeStuff::Render()
 			myContext->IASetIndexBuffer(dwarfIBuffer, DXGI_FORMAT_R32_UINT, 0);
 			myContext->PSSetShaderResources(0, 1, &dwarfTex);
 			myContext->DrawIndexedInstanced(meshes[3].numIndices, 6, 0, 0, 0);
+
+			// set world matrix
+			XMStoreFloat4x4(&myMatrices.wMatrix[0], worlds[3]);
+			myContext->Map(cBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((WVP*)(gpuBuffer.pData)) = myMatrices;
+
+			myContext->Unmap(cBuffer, 0);
+
+			myContext->VSSetConstantBuffers(0, 2, vConstants);
+
+
+			//specular Intensity
+			myLights.specular[0].x = 3.0f;
+			// specular Power
+			myLights.specular[0].y = 64.0f;
+			// Attach light to lightBuffer
+			myContext->Map(lightBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &gpuBuffer);
+			*((Lights*)(gpuBuffer.pData)) = myLights;
+
+			myContext->Unmap(lightBuffer, 0);
+
+			// Draw
+			myContext->IASetVertexBuffers(0, 1, &statueVBuffer, strides, offsets);
+			myContext->IASetIndexBuffer(statueIBuffer, DXGI_FORMAT_R32_UINT, 0);
+			myContext->PSSetShaderResources(0, 1, &skyTexture);
+			myContext->DrawIndexed(meshes[4].numIndices, 0, 0);
+
 #endif
 			// Present Backbuffer using Swapchain object
 			// Framerate is currently unlocked, we suggest "MSI Afterburner" to track your current FPS and memory usage.
